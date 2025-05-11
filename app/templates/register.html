@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Level - Регистрация</title>
+  <style>
+    /* Общие стили */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Arial', sans-serif;
+    }
+    
+    body {
+      background: #CCCCFF;
+      line-height: 1.6;
+    }
+    
+    /* Шапка */
+    .header {
+      background: white;
+      padding: 15px 50px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: fixed;
+      width: 100%;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .logo {
+      color: #000099;
+      font-size: 28px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    
+    /* Контейнер для формы регистрации */
+    .register-container {
+      margin-top: 120px;
+      max-width: 400px;
+      background: #fff;
+      padding: 40px;
+      border: 2px solid #9400D3;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .register-container h2 {
+      text-align: center;
+      color: #000099;
+      margin-bottom: 20px;
+    }
+    
+    .register-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .register-form input {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    
+    .register-form button {
+      padding: 12px;
+      background: #9400D3;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    
+    .register-form button:hover {
+      background: #000099;
+    }
+    
+    .error-message {
+      color: #D8000C;
+      background: #FFD2D2;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      display: none;
+    }
+    
+    .register-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.9em;
+      color: #666;
+    }
+    
+    .register-footer a {
+      color: #9400D3;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    
+    .register-footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <!-- Шапка -->
+  <header class="header">
+    <div class="logo">New Level</div>
+  </header>
+  
+  <!-- Контейнер для формы регистрации -->
+  <div class="register-container">
+    <h2>Регистрация</h2>
+    <form class="register-form" novalidate>
+      <input type="text" name="name" placeholder="Ваше имя" required>
+      <input type="email" name="email" placeholder="Ваш email" required>
+      <input type="password" id="password" name="password" placeholder="Ваш пароль" required>
+      <input type="password" id="confirm-password" placeholder="Подтвердите пароль" required>
+      <div class="error-message" id="error-message">Пароли не совпадают</div>
+      <button type="submit">Зарегистрироваться</button>
+    </form>
+    <div class="register-footer">
+      Уже есть аккаунт? <a href="login.html">Войдите</a>
+    </div>
+  </div>
+
+  <script>
+    const form = document.querySelector('.register-form');
+    const pwdInput = document.getElementById('password');
+    const confirmInput = document.getElementById('confirm-password');
+    const errorMessage = document.getElementById('error-message');
+
+    form.addEventListener('submit', function(event) {
+      event.preventDefault(); // отменяем стандартную отправку
+
+      // сбросим предыдущее сообщение
+      errorMessage.style.display = 'none';
+
+      // проверяем совпадение паролей
+      if (pwdInput.value !== confirmInput.value) {
+        errorMessage.style.display = 'block';
+        confirmInput.focus();
+        return;
+      }
+
+      // если всё ок — перенаправляем на index-log.html
+      window.location.href = 'index-log.html';
+    });
+  </script>
+</body>
+</html>
