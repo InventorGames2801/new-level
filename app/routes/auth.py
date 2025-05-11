@@ -1,61 +1,67 @@
-from datetime import timedelta
-
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Request, Depends, Form
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from app.models import User
+from app.auth_utils import get_db, get_password_hash, verify_password
 
-from .. import schemas, security
-from ..config import settings
-from ..database import get_db
-from ..services.user_service import create_user
+from main import templates
 
-router = APIRouter(
-    prefix=f"{settings.API_V1_PREFIX}/auth",
-    tags=["Аутентификация"]
-)
+router = APIRouter()
 
-@router.post("/register", response_model=schemas.User)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    """
-    Регистрирует нового пользователя.
-    
-    Args:
-        user (UserCreate): Данные нового пользователя.
-        db (Session): Сессия базы данных.
-        
-    Returns:
-        User: Зарегистрированный пользователь.
-    """
-    return create_user(db, user)
+@router.get("/login")
+def show_login(request: Request):
+    # Отображаем страницу с формой логина
+    return templates.TemplateResponse("login.html", {"request": request})
 
-@router.post("/token", response_model=schemas.Token)
-def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
-):
-    """
-    Создает JWT токен доступа при успешной аутентификации.
-    
-    Args:
-        form_data (OAuth2PasswordRequestForm): Форма с именем пользователя и паролем.
-        db (Session): Сессия базы данных.
-        
-    Returns:
-        Token: JWT токен доступа.
-        
-    Raises:
-        HTTPException: Если аутентификация не удалась.
-    """
-    user = security.authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверное имя пользователя или пароль",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = security.create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    
-    return {"access_token": access_token, "token_type": "bearer"}
+@router.post("/login")
+def process_login(request: Request, db: Session = Depends(get_db),
+                  email: str = Form(...), password: str = Form(...)):
+    # Ищем пользователя по email
+    user = db.query(User).filter(User.email == email).first()
+    if not user or not verify_password(password, user.password_hash):
+        # Неверный логин или пароль: возвращаем страницу логина с сообщением об ошибке
+        error_msg = "Неправильный email или пароль"
+        return templates.TemplateResponse("login.html", 
+                                          {"request": request, "error": error_msg, "email": email})
+    # Успешный вход: сохраняем user_id и роль в сессию
+    request.session["user_id"] = user.id
+    request.session["role"] = user.role
+    # Редирект на главную страницу после входа
+    return RedirectResponse(url="/", status_code=303)
+
+@router.get("/register")
+def show_register(request: Request):
+    # Отображаем страницу с формой регистрации
+    return templates.TemplateResponse("register.html", {"request": request})
+
+@router.post("/register")
+def process_register(request: Request, db: Session = Depends(get_db),
+                     name: str = Form(...), email: str = Form(...), password: str = Form(...)):
+    errors = []
+    # Проверка email
+    if db.query(User).filter(User.email == email).first():
+        errors.append("Email уже зарегистрирован")
+    # Примитивная проверка пароля (например, длина не меньше 4)
+    if len(password) < 4:
+        errors.append("Пароль слишком короткий (минимум 4 символа)")
+    if errors:
+        # Есть ошибки - возвращаем форму с сообщениями
+        return templates.TemplateResponse("register.html", 
+                                          {"request": request, "errors": errors, "name": name, "email": email})
+    # Создание нового пользователя
+    hashed_pw = get_password_hash(password)
+    new_user = User(name=name, email=email, password_hash=hashed_pw)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)  # получаем сгенерированный id
+    # Автовход нового пользователя: сохраняем в сессию
+    request.session["user_id"] = new_user.id
+    request.session["role"] = new_user.role
+    # Редирект на главную страницу вошедшего пользователя
+    return RedirectResponse(url="/", status_code=303)
+
+@router.get("/logout")
+def logout(request: Request):
+    # Очистка сессии и перенаправление на страницу логина
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=302)

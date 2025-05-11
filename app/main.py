@@ -1,79 +1,48 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
+from starlette.middleware.sessions import SessionMiddleware
+from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from pathlib import Path
 
-from . import models
-from .database import engine
-from .config import settings
-from .routes import auth, users, items
-from .templates import templates  # Импортируем настроенный шаблонизатор
+from app.routes import auth, user, admin
 
-# Создаем таблицы в базе данных
-models.Base.metadata.create_all(bind=engine)
+from models import Base
 
-# Инициализируем FastAPI приложение
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    description="Бэкенд приложения на FastAPI",
-    version="1.0.0",
-    docs_url=f"{settings.API_V1_PREFIX}/docs",
-    redoc_url=f"{settings.API_V1_PREFIX}/redoc",
-    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"
-)
+app = FastAPI()
 
-# Настройка CORS
-origins = [
-    "http://localhost:3000",
-    "http://localhost:8080",
-    "http://localhost:4200",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Подключаем директорию со статичными файлами
-static_dir = Path(__file__).parent.parent / "static"
-app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-
-# Подключаем маршруты API
 app.include_router(auth.router)
-app.include_router(users.router)
-app.include_router(items.router)
+app.include_router(user.router)
+app.include_router(admin.router)
 
-# Маршруты для статичных страниц
-@app.get("/", include_in_schema=False)
-async def home(request: Request):
-    """Главная страница"""
-    return templates.TemplateResponse("index.html", {"request": request, "title": "Главная"})
+# Подключаем шаблонизатор Jinja2, указывая папку с шаблонами
+templates = Jinja2Templates(directory="templates")
 
-@app.get("/about", include_in_schema=False)
-async def about(request: Request):
-    """О нас"""
-    return templates.TemplateResponse("about.html", {"request": request, "title": "О нас"})
+# Middleware для сессий на основе cookies (HttpOnly). 
+# Cookie будет назван "session_id", подписан secret_key и помечен как Secure и SameSite.
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key="SUPER_SECRET_KEY",       # секретный ключ для подписи cookie (должен храниться в секрете)
+    session_cookie="session_id",         # имя cookie-сессии
+    same_site="strict",                 # предотвращаем отправку cookie на сторонние сайты
+    https_only=True                     # помечать cookie как Secure (только по HTTPS)
+)
 
-@app.get("/contact", include_in_schema=False)
-async def contact(request: Request):
-    """Контакты"""
-    return templates.TemplateResponse("contact.html", {"request": request, "title": "Контакты"})
+# (Опционально) Раздача статических файлов, если нужны (например, CSS, изображения)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Обработка ошибок
-@app.exception_handler(404)
-async def not_found_exception_handler(request: Request, exc):
-    """Обработка ошибки 404 - Страница не найдена"""
-    return templates.TemplateResponse(
-        "errors/404.html", {"request": request, "title": "Страница не найдена"}, status_code=404
-    )
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-@app.get("/api", include_in_schema=False)
-def api_root():
-    """Корневой маршрут API для проверки работоспособности"""
-    return {
-        "message": "API успешно запущено",
-        "documentation": f"{settings.API_V1_PREFIX}/docs"
-    }
+DATABASE_URL = "postgresql://username:password@localhost:5432/mydatabase"
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine, autoflush=False)
+
+# Создаём таблицы в базе (если база еще пуста)
+Base.metadata.create_all(bind=engine)
+
+# Зависимость для получения сессии базы данных
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
