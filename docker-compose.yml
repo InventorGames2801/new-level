@@ -1,28 +1,49 @@
 services:
+  # База данных PostgreSQL
   db:
-    image: postgres:17
-    container_name: postgres_fastapi
+    image: postgres:15
+    container_name: newlevel_db
     restart: always
     environment:
-      POSTGRES_USER:     postgres
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB:       next_level_app_db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      POSTGRES_DB: newlevel
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
 
+  # Приложение FastAPI
   backend:
     build:
       context: .
       dockerfile: app/Dockerfile
-    container_name: fastapi_app
-    env_file:
-      - .env
+    container_name: newlevel_app
+    restart: always
     depends_on:
       - db
+    environment:
+      DATABASE_URL: "postgresql+psycopg2://postgres:postgres@db:5432/newlevel"
+      SECRET_KEY: "your-secret-key-for-jwt-tokens"
+      ALGORITHM: "HS256"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      INIT_DB: "true"
     ports:
       - "8000:8000"
+    networks:
+      - app-network
+    volumes:
+      - ./app:/app/app
+      - ./app/static:/app/app/static
+      - ./app/templates:/app/app/templates
+
+networks:
+  app-network:
+    name: newlevel_network
+    driver: bridge
 
 volumes:
   postgres_data:
+    name: newlevel_postgres_data

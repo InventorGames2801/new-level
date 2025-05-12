@@ -2,7 +2,7 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, Request, Depends, status
 from sqlalchemy.orm import Session
 from app.models import User
-from app.main import get_db
+from app.database import get_db
 
 # Настройка контекста хеширования (алгоритм bcrypt)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

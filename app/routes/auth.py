@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from app.models import User
 from app.auth_utils import get_db, get_password_hash, verify_password
-
-from main import templates
+from app.templates import templates
 
 router = APIRouter()
 
-@router.get("/login")
+@router.get("/login", response_class=HTMLResponse)
 def show_login(request: Request):
     # Отображаем страницу с формой логина
     return templates.TemplateResponse("login.html", {"request": request})
@@ -29,7 +28,7 @@ def process_login(request: Request, db: Session = Depends(get_db),
     # Редирект на главную страницу после входа
     return RedirectResponse(url="/", status_code=303)
 
-@router.get("/register")
+@router.get("/register", response_class=HTMLResponse)
 def show_register(request: Request):
     # Отображаем страницу с формой регистрации
     return templates.TemplateResponse("register.html", {"request": request})
@@ -64,4 +63,4 @@ def process_register(request: Request, db: Session = Depends(get_db),
 def logout(request: Request):
     # Очистка сессии и перенаправление на страницу логина
     request.session.clear()
-    return RedirectResponse(url="/login", status_code=302)
+    return RedirectResponse(url="/", status_code=302)

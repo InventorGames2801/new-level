@@ -1,15 +1,13 @@
-# routes/admin.py
-from fastapi import APIRouter, Depends
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Request, Depends
+from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
-from models import User, Word, GameSetting
+from app.models import User, Word, GameSetting
 from app.auth_utils import get_admin_user, get_db
-
-from main import templates
+from app.templates import templates
 
 router = APIRouter()
 
-@router.get("/admin")
+@router.get("/admin", response_class=HTMLResponse)
 def admin_dashboard(request: Request, current_admin: User = Depends(get_admin_user),
                     db: Session = Depends(get_db)):
     # Получаем данные для админ-панели
