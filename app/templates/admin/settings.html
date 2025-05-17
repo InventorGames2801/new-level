@@ -513,39 +513,6 @@
     <button type="submit" class="btn-primary" style="margin-bottom: 30px;">Сохранить все настройки</button>
     <span id="save-indicator" class="save-indicator">Настройки сохранены!</span>
   </form>
-  
-  <!-- Форма добавления новой настройки -->
-  <div class="add-setting-form">
-    <h3>Добавить новую настройку</h3>
-    
-    <div class="form-row">
-      <div class="form-group">
-        <label for="new_key">Ключ настройки:</label>
-        <input type="text" id="new_key" name="new_key" class="form-control" placeholder="Например: max_daily_games">
-      </div>
-      <div class="form-group">
-        <label for="new_value">Значение:</label>
-        <input type="text" id="new_value" name="new_value" class="form-control" placeholder="Например: 10">
-      </div>
-      <div class="form-group">
-        <label for="new_category">Категория:</label>
-        <select id="new_category" name="new_category" class="form-control">
-          <option value="gameplay">Игровой процесс</option>
-          <option value="difficulty">Сложность</option>
-          <option value="interface">Интерфейс</option>
-          <option value="system">Системные настройки</option>
-          <option value="custom">Другое</option>
-        </select>
-      </div>
-    </div>
-    
-    <div class="form-group">
-      <label for="new_description">Описание настройки:</label>
-      <input type="text" id="new_description" name="new_description" class="form-control" placeholder="Описание для администраторов">
-    </div>
-    
-    <button type="submit" class="btn-primary" style="margin-top: 10px;">Добавить настройку</button>
-  </div>
 </div>
 {% endblock %}
 

@@ -360,30 +360,6 @@ async def update_settings(
                         setting.value = value
                         updated_keys.append(setting_key)
 
-        # Обрабатываем новую настройку отдельно для более четкого логирования
-        new_key = form_data.get("new_key")
-        new_value = form_data.get("new_value")
-
-        if new_key and new_value:
-            if len(new_key.strip()) == 0:
-                raise HTTPException(
-                    status_code=400, detail="Ключ настройки не может быть пустым"
-                )
-
-            existing = db.query(GameSetting).filter(GameSetting.key == new_key).first()
-            if not existing:
-                logger.info(
-                    admin_log_format,
-                    f"Создана новая настройка '{new_key}' со значением '{new_value}'",
-                )
-                new_setting = GameSetting(key=new_key, value=new_value)
-                db.add(new_setting)
-            else:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Настройка с ключом '{new_key}' уже существует",
-                )
-
         db.commit()
 
         # Финальный лог для общего результата операции
