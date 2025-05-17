@@ -1,0 +1,24 @@
+{% extends "layout.html" %} {% block title %}Требуется авторизация{% endblock %}
+{% block additional_styles %} .error-container { margin-top: 150px; padding:
+40px 20px; text-align: center; max-width: 800px; margin-left: auto;
+margin-right: auto; } .error-code { font-size: 72px; font-weight: 800; color:
+var(--primary); margin-bottom: 20px; } .error-title { font-size: 32px;
+font-weight: 700; color: var(--secondary); margin-bottom: 20px; } .error-message
+{ font-size: 18px; color: #555; margin-bottom: 30px; line-height: 1.6; }
+.error-actions { margin-top: 30px; } .error-actions .btn { margin: 0 10px; } {%
+endblock %} {% block content %}
+<div class="error-container">
+  <div class="error-code">401</div>
+  <h1 class="error-title">Требуется авторизация</h1>
+
+  <div class="error-message">
+    <p>Для доступа к этой странице необходимо авторизоваться в системе.</p>
+    <p>Возможно, время вашей сессии истекло, или у вас нет достаточных прав.</p>
+  </div>
+
+  <div class="error-actions">
+    <a href="/login" class="btn"><i class="fas fa-sign-in-alt"></i> Войти</a>
+    <a href="/" class="btn"><i class="fas fa-home"></i> На главную</a>
+  </div>
+</div>
+{% endblock %}

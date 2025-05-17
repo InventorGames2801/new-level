@@ -68,6 +68,16 @@ def init_db():
         admin_email = os.getenv("ADMIN_EMAIL")
         admin_password = os.getenv("ADMIN_PASSWORD")
 
+        if not admin_email or not admin_password:
+            logger.warning(
+                "ВНИМАНИЕ: Не установлены переменные ADMIN_EMAIL или ADMIN_PASSWORD!"
+            )
+            logger.warning(
+                "Для безопасности приложения, необходимо установить эти переменные в .env файле"
+            )
+            logger.warning("Без этих переменных приложение не создаст администратора.")
+            return False
+
         if admin_name and admin_email and admin_password:
             db = SessionLocal()
             existing = db.query(User).filter(User.email == admin_email).first()

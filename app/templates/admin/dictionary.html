@@ -1,0 +1,617 @@
+{% extends "layout.html" %}
+{% block title %}Управление словарем{% endblock %}
+
+{% block additional_styles %}
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #CCCCFF;
+  }
+  
+  .admin-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 120px auto 30px;
+    padding: 20px;
+  }
+  
+  /* Навигационные вкладки */
+  .admin-nav {
+    display: flex;
+    border-bottom: 1px solid #9400D3;
+    margin-bottom: 20px;
+  }
+  
+  .admin-nav a {
+    padding: 10px 20px;
+    text-decoration: none;
+    color: black;
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  
+  .admin-nav a.active {
+    border-bottom: 3px solid #9400D3;
+    color: #9400D3;
+  }
+  
+  /* Кнопка возврата */
+  .back-button {
+    display: inline-block;
+    border: 2px solid #9400D3;
+    color: #9400D3;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-bottom: 20px;
+  }
+  
+  .back-button:hover {
+    background-color: #9400D3;
+    color: white;
+  }
+  
+  /* Заголовки и содержимое */
+  h2 {
+    margin: 20px 0;
+    font-size: 24px;
+    color: #333;
+  }
+
+  h3 {
+    margin: 15px 0;
+    font-size: 20px;
+    color: var(--secondary);
+  }
+  
+  /* Фильтры и поиск */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f0f0ff;
+    border-radius: 8px;
+    align-items: center;
+  }
+  
+  .filter-bar label {
+    font-weight: bold;
+    margin-right: 5px;
+  }
+  
+  .filter-bar select, .filter-bar input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .filter-bar button {
+    padding: 8px 16px;
+    background-color: var(--secondary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .filter-bar button:hover {
+    background-color: var(--primary);
+  }
+  
+  /* Формы */
+  .admin-form {
+    background-color: #F8F8FF;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 15px;
+  }
+  
+  .form-control:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(148, 0, 211, 0.2);
+  }
+  
+  .form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .form-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+  }
+  
+  .dynamic-fields {
+    padding: 15px;
+    border: 1px solid #e0e0ff;
+    border-radius: 4px;
+    background: #f8f8ff;
+    margin-top: 15px;
+  }
+  
+  /* Таблицы */
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0 30px 0;
+    background-color: white;
+  }
+  
+  .admin-table th, .admin-table td {
+    padding: 12px;
+    text-align: left;
+    border: 1px solid #ddd;
+  }
+  
+  .admin-table th {
+    background-color: #F8F8FF;
+    color: #333;
+    position: sticky;
+    top: 0;
+  }
+  
+  .admin-table tr:nth-child(odd) {
+    background-color: #DADAFF;
+  }
+  
+  .admin-table tr:nth-child(even) {
+    background-color: #E8E8FF;
+  }
+  
+  .admin-table tr:hover {
+    background-color: #f0f0ff;
+  }
+  
+  /* Действия и кнопки */
+  .btn-primary {
+    background-color: #9400D3;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .btn-primary:hover {
+    background-color: #7B00AD;
+  }
+  
+  .btn-sm {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
+  .btn-danger {
+    background-color: #dc3545;
+  }
+  
+  .btn-danger:hover {
+    background-color: #bd2130;
+  }
+  
+  .btn-info {
+    background-color: #17a2b8;
+  }
+  
+  .btn-info:hover {
+    background-color: #138496;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 5px;
+  }
+  
+  /* Бейджи для отображения сложности */
+  .badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+  }
+  
+  .badge-easy {
+    background-color: #28a745;
+  }
+  
+  .badge-medium {
+    background-color: #ffc107;
+    color: #212529;
+  }
+  
+  .badge-hard {
+    background-color: #dc3545;
+  }
+  
+  /* Пагинация */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+    gap: 10px;
+  }
+  
+  .pagination a {
+    color: var(--secondary);
+    padding: 8px 16px;
+    text-decoration: none;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  .pagination a.active {
+    background-color: var(--primary);
+    color: white;
+    border: 1px solid var(--primary);
+  }
+  
+  .pagination a:hover:not(.active) {
+    background-color: #ddd;
+  }
+  
+  /* Статистика */
+  .stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .stat-card {
+    flex: 1;
+    min-width: 200px;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    text-align: center;
+  }
+  
+  .stat-card h4 {
+    margin-top: 0;
+    color: #555;
+    font-size: 16px;
+  }
+  
+  .stat-card .value {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--primary);
+    margin: 10px 0;
+  }
+
+  /* Вкладки для формы */
+  .form-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .form-tab {
+    padding: 8px 15px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 5px 5px 0 0;
+    background-color: #f0f0f0;
+  }
+
+  .form-tab.active {
+    background-color: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  /* Скроллируемая таблица */
+  .table-container {
+    max-height: 500px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <!-- Навигационные вкладки -->
+  <div class="admin-nav">
+    <a href="/admin" {% if active_tab == 'stats' %}class="active"{% endif %}>Статистика</a>
+    <a href="/admin/users" {% if active_tab == 'users' %}class="active"{% endif %}>Пользователи</a>
+    <a href="/admin/dictionary" {% if active_tab == 'dictionary' %}class="active"{% endif %}>Словарь</a>
+    <a href="/admin/settings" {% if active_tab == 'settings' %}class="active"{% endif %}>Настройки</a>
+  </div>
+  
+  <!-- Кнопка возврата -->
+  <a href="/" class="back-button">Вернуться на сайт</a>
+  
+  <h2>Управление словарем</h2>
+  
+  <!-- Статистика словаря -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <h4>Всего слов</h4>
+      <div class="value">{{ words|length }}</div>
+    </div>
+    <div class="stat-card">
+      <h4>Анаграммы</h4>
+      <div class="value">{{ words|selectattr('game_type', 'equalto', 'scramble')|list|length }}</div>
+    </div>
+    <div class="stat-card">
+      <h4>Сопоставления</h4>
+      <div class="value">{{ words|selectattr('game_type', 'equalto', 'matching')|list|length }}</div>
+    </div>
+    <div class="stat-card">
+      <h4>Написание слов</h4>
+      <div class="value">{{ words|selectattr('game_type', 'equalto', 'typing')|list|length }}</div>
+    </div>
+  </div>
+  
+  <!-- Форма добавления слова с вкладками -->
+  <div class="admin-form">
+    <h3>Добавить новое слово</h3>
+    
+    <div class="form-tabs">
+      <div class="form-tab active" data-form-type="scramble">Анаграммы</div>
+      <div class="form-tab" data-form-type="matching">Сопоставления</div>
+      <div class="form-tab" data-form-type="typing">Написание слов</div>
+    </div>
+    
+    <!-- Форма добавления слова для анаграмм -->
+    <form id="form-scramble" method="post" action="/admin/words/create" class="word-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="text-scramble">Слово:</label>
+          <input type="text" id="text-scramble" name="text" class="form-control" required placeholder="Введите английское слово">
+        </div>
+        <div class="form-group">
+          <label for="difficulty-scramble">Сложность:</label>
+          <select id="difficulty-scramble" name="difficulty" class="form-control">
+            <option value="easy">Легкая</option>
+            <option value="medium">Средняя</option>
+            <option value="hard">Сложная</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="scrambled">Перемешанное слово (опционально):</label>
+        <input type="text" id="scrambled" name="scrambled" class="form-control" placeholder="Оставьте пустым для автоматической генерации">
+        <small>Если не указано, будет создано автоматически</small>
+      </div>
+      <input type="hidden" name="game_type" value="scramble">
+      <button type="submit" class="btn-primary">Добавить слово</button>
+    </form>
+    
+    <!-- Форма добавления слова для сопоставлений -->
+    <form id="form-matching" method="post" action="/admin/words/create" class="word-form" style="display: none;">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="text-matching">Английское слово:</label>
+          <input type="text" id="text-matching" name="text" class="form-control" required placeholder="Введите английское слово">
+        </div>
+        <div class="form-group">
+          <label for="difficulty-matching">Сложность:</label>
+          <select id="difficulty-matching" name="difficulty" class="form-control">
+            <option value="easy">Легкая</option>
+            <option value="medium">Средняя</option>
+            <option value="hard">Сложная</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="translation">Перевод:</label>
+        <input type="text" id="translation" name="translation" class="form-control" required placeholder="Введите перевод на русский">
+      </div>
+      <input type="hidden" name="game_type" value="matching">
+      <button type="submit" class="btn-primary">Добавить слово</button>
+    </form>
+    
+    <!-- Форма добавления слова для написания слов -->
+    <form id="form-typing" method="post" action="/admin/words/create" class="word-form" style="display: none;">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="text-typing">Английское слово:</label>
+          <input type="text" id="text-typing" name="text" class="form-control" required placeholder="Введите английское слово">
+        </div>
+        <div class="form-group">
+          <label for="difficulty-typing">Сложность:</label>
+          <select id="difficulty-typing" name="difficulty" class="form-control">
+            <option value="easy">Легкая</option>
+            <option value="medium">Средняя</option>
+            <option value="hard">Сложная</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="description">Описание/подсказка:</label>
+        <textarea id="description" name="description" class="form-control" required rows="3" placeholder="Введите описание или подсказку для этого слова"></textarea>
+      </div>
+      <input type="hidden" name="game_type" value="typing">
+      <button type="submit" class="btn-primary">Добавить слово</button>
+    </form>
+  </div>
+  
+  <!-- Фильтры и поиск для словаря -->
+  <div class="filter-bar">
+    <div>
+      <label for="filter-game-type">Тип игры:</label>
+      <select id="filter-game-type" class="filter-select">
+        <option value="">Все типы</option>
+        <option value="scramble">Анаграммы</option>
+        <option value="matching">Сопоставления</option>
+        <option value="typing">Написание слов</option>
+      </select>
+    </div>
+    <div>
+      <label for="filter-difficulty">Сложность:</label>
+      <select id="filter-difficulty" class="filter-select">
+        <option value="">Любая</option>
+        <option value="easy">Легкая</option>
+        <option value="medium">Средняя</option>
+        <option value="hard">Сложная</option>
+      </select>
+    </div>
+    <div>
+      <label for="search-word">Поиск:</label>
+      <input type="text" id="search-word" placeholder="Введите слово..." class="filter-input">
+    </div>
+    <button id="reset-filters" class="btn-sm">Сбросить фильтры</button>
+  </div>
+  
+  <!-- Таблица со словами -->
+  <div class="table-container">
+    <table class="admin-table" id="words-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Слово</th>
+          <th>Тип игры</th>
+          <th>Сложность</th>
+          <th>Доп. информация</th>
+          <th>Использовано</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for word in words %}
+        <tr data-game-type="{{ word.game_type }}" data-difficulty="{{ word.difficulty }}" data-word="{{ word.text }}">
+          <td>{{ word.id }}</td>
+          <td>{{ word.text }}</td>
+          <td>
+            {% if word.game_type == 'scramble' %}
+            Анаграммы
+            {% elif word.game_type == 'matching' %}
+            Сопоставления
+            {% elif word.game_type == 'typing' %}
+            Написание слов
+            {% endif %}
+          </td>
+          <td>
+            {% if word.difficulty == 'easy' %}
+            <span class="badge badge-easy">Легкая</span>
+            {% elif word.difficulty == 'medium' %}
+            <span class="badge badge-medium">Средняя</span>
+            {% elif word.difficulty == 'hard' %}
+            <span class="badge badge-hard">Сложная</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if word.game_type == 'scramble' %}
+            Анаграмма: {{ word.scrambled or 'Авто' }}
+            {% elif word.game_type == 'matching' %}
+            Перевод: {{ word.translation }}
+            {% elif word.game_type == 'typing' %}
+            {{ word.description|truncate(30) }}
+            {% endif %}
+          </td>
+          <td>{{ word.times_shown }} раз ({{ word.times_correct }} правильно)</td>
+          <td class="action-buttons">
+            <a href="/admin/words/{{ word.id }}/edit" class="btn-primary btn-sm btn-info">Изменить</a>
+            <form method="post" action="/admin/words/{{ word.id }}/delete" style="display: inline;">
+              <button type="submit" class="btn-primary btn-sm btn-danger" onclick="return confirm('Вы уверены, что хотите удалить это слово?')">Удалить</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- Пагинация подключается при большом количестве слов -->
+  {% if words|length > 50 %}
+  <div class="pagination">
+    <a href="#" class="active">1</a>
+    <a href="#">2</a>
+    <a href="#">3</a>
+    <a href="#">&raquo;</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Переключение между типами форм добавления слов
+  document.addEventListener('DOMContentLoaded', function() {
+    const formTabs = document.querySelectorAll('.form-tab');
+    const wordForms = document.querySelectorAll('.word-form');
+    
+    formTabs.forEach(tab => {
+      tab.addEventListener('click', function() {
+        // Обновляем активную вкладку
+        formTabs.forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Показываем соответствующую форму
+        const formType = this.dataset.formType;
+        wordForms.forEach(form => {
+          form.style.display = form.id === `form-${formType}` ? 'block' : 'none';
+        });
+      });
+    });
+    
+    // Фильтрация таблицы слов
+    const filterGameType = document.getElementById('filter-game-type');
+    const filterDifficulty = document.getElementById('filter-difficulty');
+    const searchWord = document.getElementById('search-word');
+    const resetButton = document.getElementById('reset-filters');
+    const rows = document.querySelectorAll('#words-table tbody tr');
+    
+    function applyFilters() {
+      const gameType = filterGameType.value;
+      const difficulty = filterDifficulty.value;
+      const searchText = searchWord.value.toLowerCase();
+      
+      rows.forEach(row => {
+        const rowGameType = row.dataset.gameType;
+        const rowDifficulty = row.dataset.difficulty;
+        const rowWord = row.dataset.word.toLowerCase();
+        
+        const matchGameType = !gameType || rowGameType === gameType;
+        const matchDifficulty = !difficulty || rowDifficulty === difficulty;
+        const matchSearch = !searchText || rowWord.includes(searchText);
+        
+        row.style.display = matchGameType && matchDifficulty && matchSearch ? '' : 'none';
+      });
+    }
+    
+    filterGameType.addEventListener('change', applyFilters);
+    filterDifficulty.addEventListener('change', applyFilters);
+    searchWord.addEventListener('input', applyFilters);
+    
+    resetButton.addEventListener('click', function() {
+      filterGameType.value = '';
+      filterDifficulty.value = '';
+      searchWord.value = '';
+      applyFilters();
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,635 @@
+{% extends "layout.html" %}
+{% block title %}Настройки приложения{% endblock %}
+
+{% block additional_styles %}
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #CCCCFF;
+  }
+  
+  .admin-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 120px auto 30px;
+    padding: 20px;
+  }
+  
+  /* Навигационные вкладки */
+  .admin-nav {
+    display: flex;
+    border-bottom: 1px solid #9400D3;
+    margin-bottom: 20px;
+  }
+  
+  .admin-nav a {
+    padding: 10px 20px;
+    text-decoration: none;
+    color: black;
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  
+  .admin-nav a.active {
+    border-bottom: 3px solid #9400D3;
+    color: #9400D3;
+  }
+  
+  /* Кнопка возврата */
+  .back-button {
+    display: inline-block;
+    border: 2px solid #9400D3;
+    color: #9400D3;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-bottom: 20px;
+  }
+  
+  .back-button:hover {
+    background-color: #9400D3;
+    color: white;
+  }
+  
+  h2 {
+    margin: 20px 0;
+    font-size: 24px;
+    color: #333;
+  }
+
+  h3 {
+    margin: 15px 0;
+    font-size: 20px;
+    color: var(--secondary);
+  }
+  
+  /* Карточки настроек */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .settings-category {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  
+  .settings-category h3 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--primary);
+    color: var(--secondary);
+  }
+  
+  .settings-category p {
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  
+  /* Форма настроек */
+  .settings-form {
+    margin-top: 20px;
+  }
+  
+  .setting-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .setting-item:last-child {
+    border-bottom: none;
+  }
+  
+  .setting-name {
+    flex: 1;
+    font-weight: bold;
+  }
+  
+  .setting-description {
+    color: #666;
+    font-size: 13px;
+    margin-top: 5px;
+  }
+  
+  .setting-value {
+    flex: 2;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 15px;
+  }
+  
+  .form-control:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(148, 0, 211, 0.2);
+  }
+  
+  /* Добавление новой настройки */
+  .add-setting-form {
+    background-color: #f8f8ff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  
+  .form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .form-row .form-group {
+    flex: 1;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  /* Кнопки */
+  .btn-primary {
+    background-color: #9400D3;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+  }
+  
+  .btn-primary:hover {
+    background-color: #7B00AD;
+  }
+  
+  .dropdown {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    right: 0;
+    border-radius: 4px;
+  }
+  
+  .dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+  }
+  
+  .dropdown-content a:hover {
+    background-color: #f1f1f1;
+  }
+  
+  .dropdown:hover .dropdown-content {
+    display: block;
+  }
+  
+  /* Tooltip для описаний настроек */
+  .tooltip {
+    position: relative;
+    display: inline-block;
+    margin-left: 5px;
+    color: #999;
+  }
+  
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    width: 200px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 12px;
+    font-weight: normal;
+  }
+  
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+  }
+  
+  /* Индикаторы сохранения */
+  .save-indicator {
+    margin-left: 10px;
+    display: none;
+    font-size: 14px;
+    color: #28a745;
+  }
+  
+  .search-box {
+    margin-bottom: 20px;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+  }
+  
+  /* Стили для переключателя */
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+  }
+  
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+  
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+  
+  input:checked + .toggle-slider {
+    background-color: var(--primary);
+  }
+  
+  input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+  }
+  
+  /* Индикатор значения по умолчанию */
+  .default-value {
+    font-size: 12px;
+    color: #888;
+    margin-left: 5px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <!-- Навигационные вкладки -->
+  <div class="admin-nav">
+    <a href="/admin" {% if active_tab == 'stats' %}class="active"{% endif %}>Статистика</a>
+    <a href="/admin/users" {% if active_tab == 'users' %}class="active"{% endif %}>Пользователи</a>
+    <a href="/admin/dictionary" {% if active_tab == 'dictionary' %}class="active"{% endif %}>Словарь</a>
+    <a href="/admin/settings" {% if active_tab == 'settings' %}class="active"{% endif %}>Настройки</a>
+  </div>
+  
+  <!-- Кнопка возврата -->
+  <a href="/" class="back-button">Вернуться на сайт</a>
+  
+  <h2>Настройки приложения</h2>
+  
+  <!-- Поиск настроек -->
+  <input type="text" id="search-settings" class="search-box" placeholder="Поиск настроек...">
+  
+  <form method="post" action="/admin/settings/update" id="settings-form">
+    <!-- Сетка категорий настроек -->
+    <div class="settings-grid">
+      <!-- Категория: Игровой процесс -->
+      <div class="settings-category" data-category="gameplay">
+        <h3>Игровой процесс</h3>
+        <p>Настройки опыта, уровней и базовой игровой механики</p>
+        
+        <div class="settings-form">
+          <!-- Настройка: очки за ответ -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Очки за правильный ответ
+              <div class="setting-description">Количество очков опыта за один правильный ответ</div>
+            </div>
+            <div class="setting-value">
+              <input type="number" name="setting_points_per_answer" value="{{ settings|selectattr('key', 'equalto', 'points_per_answer')|map(attribute='value')|first|default('10') }}" class="form-control" min="1" max="100">
+            </div>
+          </div>
+          
+          <!-- Настройка: очки для повышения уровня -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Очки для повышения уровня
+              <div class="setting-description">Количество очков опыта, необходимое для перехода на следующий уровень</div>
+            </div>
+            <div class="setting-value">
+              <input type="number" name="setting_points_for_level_up" value="{{ settings|selectattr('key', 'equalto', 'points_for_level_up')|map(attribute='value')|first|default('100') }}" class="form-control" min="10" max="1000">
+            </div>
+          </div>
+          
+          <!-- Настройка: бонус за серию -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Бонус за серию
+              <div class="setting-description">Дополнительные очки за серию правильных ответов</div>
+            </div>
+            <div class="setting-value">
+              <input type="number" name="setting_streak_bonus" value="{{ settings|selectattr('key', 'equalto', 'streak_bonus')|map(attribute='value')|first|default('5') }}" class="form-control" min="0" max="50">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Категория: Сложность -->
+      <div class="settings-category" data-category="difficulty">
+        <h3>Сложность</h3>
+        <p>Настройки уровней сложности и адаптации</p>
+        
+        <div class="settings-form">
+          <!-- Настройка: время на ответ -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Время на ответ (сек)
+              <div class="setting-description">Время на выполнение одного задания в секундах</div>
+            </div>
+            <div class="setting-value">
+              <input type="number" name="setting_answer_time_limit" value="{{ settings|selectattr('key', 'equalto', 'answer_time_limit')|map(attribute='value')|first|default('30') }}" class="form-control" min="5" max="120">
+            </div>
+          </div>
+          
+          <!-- Настройка: множитель сложности -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Множитель сложности
+              <div class="setting-description">Насколько быстро растет сложность с повышением уровня</div>
+            </div>
+            <div class="setting-value">
+              <input type="number" name="setting_difficulty_multiplier" value="{{ settings|selectattr('key', 'equalto', 'difficulty_multiplier')|map(attribute='value')|first|default('1.2') }}" class="form-control" min="1" max="2" step="0.1">
+            </div>
+          </div>
+          
+          <!-- Настройка: пороги сложности -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Пороги сложности (уровни)
+              <div class="setting-description">Уровни пользователя, при которых повышается сложность (через запятую)</div>
+            </div>
+            <div class="setting-value">
+              <input type="text" name="setting_difficulty_thresholds" value="{{ settings|selectattr('key', 'equalto', 'difficulty_thresholds')|map(attribute='value')|first|default('4,8,12') }}" class="form-control" placeholder="4,8,12">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Категория: Интерфейс -->
+      <div class="settings-category" data-category="interface">
+        <h3>Интерфейс</h3>
+        <p>Настройки пользовательского интерфейса</p>
+        
+        <div class="settings-form">
+          <!-- Настройка: показывать подсказки -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Показывать подсказки
+              <div class="setting-description">Разрешить показ подсказок в играх</div>
+            </div>
+            <div class="setting-value">
+              <label class="toggle-switch">
+                <input type="checkbox" name="setting_show_hints" value="1" {% if settings|selectattr('key', 'equalto', 'show_hints')|map(attribute='value')|first|default('1') == '1' %}checked{% endif %}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          
+          <!-- Настройка: анимации -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Анимации наград
+              <div class="setting-description">Показывать анимации при получении наград</div>
+            </div>
+            <div class="setting-value">
+              <label class="toggle-switch">
+                <input type="checkbox" name="setting_show_animations" value="1" {% if settings|selectattr('key', 'equalto', 'show_animations')|map(attribute='value')|first|default('1') == '1' %}checked{% endif %}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          
+          <!-- Настройка: количество слов в игре -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Количество слов в игре
+              <div class="setting-description">Количество слов, предлагаемых за одну игровую сессию</div>
+            </div>
+            <div class="setting-value">
+              <input type="number" name="setting_words_per_game" value="{{ settings|selectattr('key', 'equalto', 'words_per_game')|map(attribute='value')|first|default('5') }}" class="form-control" min="3" max="20">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Категория: Системные настройки -->
+      <div class="settings-category" data-category="system">
+        <h3>Системные настройки</h3>
+        <p>Технические настройки приложения</p>
+        
+        <div class="settings-form">
+          <!-- Настройка: учетная запись администратора -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Email администратора
+              <div class="setting-description">Email основного администратора системы</div>
+            </div>
+            <div class="setting-value">
+              <input type="email" name="setting_admin_email" value="{{ settings|selectattr('key', 'equalto', 'admin_email')|map(attribute='value')|first|default('admin@example.com') }}" class="form-control">
+            </div>
+          </div>
+          
+          <!-- Настройка: время сессии -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Время сессии (минуты)
+              <div class="setting-description">Продолжительность сессии пользователя до автоматического выхода</div>
+            </div>
+            <div class="setting-value">
+              <input type="number" name="setting_session_lifetime" value="{{ settings|selectattr('key', 'equalto', 'session_lifetime')|map(attribute='value')|first|default('30') }}" class="form-control" min="5" max="1440">
+            </div>
+          </div>
+          
+          <!-- Настройка: режим отладки -->
+          <div class="setting-item">
+            <div class="setting-name">
+              Режим отладки
+              <div class="setting-description">Включить расширенное логирование и отладочную информацию</div>
+            </div>
+            <div class="setting-value">
+              <label class="toggle-switch">
+                <input type="checkbox" name="setting_debug_mode" value="1" {% if settings|selectattr('key', 'equalto', 'debug_mode')|map(attribute='value')|first|default('0') == '1' %}checked{% endif %}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Кнопка сохранения всех настроек -->
+    <button type="submit" class="btn-primary" style="margin-bottom: 30px;">Сохранить все настройки</button>
+    <span id="save-indicator" class="save-indicator">Настройки сохранены!</span>
+  </form>
+  
+  <!-- Форма добавления новой настройки -->
+  <div class="add-setting-form">
+    <h3>Добавить новую настройку</h3>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label for="new_key">Ключ настройки:</label>
+        <input type="text" id="new_key" name="new_key" class="form-control" placeholder="Например: max_daily_games">
+      </div>
+      <div class="form-group">
+        <label for="new_value">Значение:</label>
+        <input type="text" id="new_value" name="new_value" class="form-control" placeholder="Например: 10">
+      </div>
+      <div class="form-group">
+        <label for="new_category">Категория:</label>
+        <select id="new_category" name="new_category" class="form-control">
+          <option value="gameplay">Игровой процесс</option>
+          <option value="difficulty">Сложность</option>
+          <option value="interface">Интерфейс</option>
+          <option value="system">Системные настройки</option>
+          <option value="custom">Другое</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label for="new_description">Описание настройки:</label>
+      <input type="text" id="new_description" name="new_description" class="form-control" placeholder="Описание для администраторов">
+    </div>
+    
+    <button type="submit" class="btn-primary" style="margin-top: 10px;">Добавить настройку</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Поиск настроек
+    const searchBox = document.getElementById('search-settings');
+    const settingItems = document.querySelectorAll('.setting-item');
+    const settingCategories = document.querySelectorAll('.settings-category');
+    
+    searchBox.addEventListener('keyup', function() {
+      const searchText = this.value.toLowerCase();
+      
+      // Сбрасываем видимость всех категорий и настроек
+      settingCategories.forEach(category => {
+        category.style.display = 'block';
+      });
+      
+      settingItems.forEach(item => {
+        item.style.display = 'flex';
+      });
+      
+      if (searchText) {
+        // Скрываем настройки, которые не соответствуют поиску
+        settingItems.forEach(item => {
+          const settingName = item.querySelector('.setting-name').textContent.toLowerCase();
+          const settingDesc = item.querySelector('.setting-description').textContent.toLowerCase();
+          
+          if (!settingName.includes(searchText) && !settingDesc.includes(searchText)) {
+            item.style.display = 'none';
+          }
+        });
+        
+        // Скрываем категории, у которых все настройки скрыты
+        settingCategories.forEach(category => {
+          const visibleSettings = Array.from(category.querySelectorAll('.setting-item')).filter(item => {
+            return item.style.display !== 'none';
+          });
+          
+          if (visibleSettings.length === 0) {
+            category.style.display = 'none';
+          }
+        });
+      }
+    });
+    
+    // Обработка формы настроек
+    const settingsForm = document.getElementById('settings-form');
+    const saveIndicator = document.getElementById('save-indicator');
+    
+    // После отправки формы показываем индикатор сохранения
+    settingsForm.addEventListener('submit', function(event) {
+      // Здесь можно добавить дополнительную валидацию перед отправкой
+      
+      // Показываем индикатор сохранения через AJAX, если необходимо
+      // В этом примере просто имитируем успешное сохранение
+      // event.preventDefault();
+      // saveIndicator.style.display = 'inline';
+      // setTimeout(() => { saveIndicator.style.display = 'none'; }, 3000);
+    });
+    
+    // Функция для преобразования значений переключателей в скрытые поля перед отправкой
+    function prepareFormForSubmit() {
+      const toggles = document.querySelectorAll('.toggle-switch input[type="checkbox"]');
+      
+      toggles.forEach(toggle => {
+        const name = toggle.name;
+        const isChecked = toggle.checked;
+        
+        // Создаем скрытое поле с актуальным значением
+        const hiddenField = document.createElement('input');
+        hiddenField.type = 'hidden';
+        hiddenField.name = name;
+        hiddenField.value = isChecked ? '1' : '0';
+        
+        // Заменяем чекбокс скрытым полем
+        toggle.parentNode.appendChild(hiddenField);
+        toggle.name = ''; // Чтобы чекбокс не отправлялся
+      });
+    }
+    
+    // Вызываем функцию при отправке формы
+    settingsForm.addEventListener('submit', prepareFormForSubmit);
+  });
+</script>
+{% endblock %}

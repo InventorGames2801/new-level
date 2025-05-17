@@ -11,7 +11,7 @@
   .admin-container {
     width: 100%;
     max-width: 1200px;
-    margin: 0 auto;
+    margin: 120px auto 30px;  /* Увеличен отступ сверху для учета фиксированного заголовка */
     padding: 20px;
   }
   
@@ -156,7 +156,7 @@
 
 {% block content %}
 <div class="admin-container">
-  <!-- Навигационные вкладки -->
+  <!-- Навигационные вкладки - это ключевая часть, которая отсутствовала -->
   <div class="admin-nav">
     <a href="/admin" {% if active_tab == 'stats' or not active_tab %}class="active"{% endif %}>Статистика</a>
     <a href="/admin/users" {% if active_tab == 'users' %}class="active"{% endif %}>Пользователи</a>

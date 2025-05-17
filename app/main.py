@@ -2,6 +2,13 @@ from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+from fastapi.exceptions import RequestValidationError, HTTPException
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from app.error_handlers import (
+    unauthorized_exception_handler,
+    not_found_exception_handler,
+    generic_exception_handler,
+)
 import logging
 
 from app.routes import auth, index, user, game, admin  # Добавлен импорт admin
@@ -107,6 +114,28 @@ async def startup_event():
             logger.error(f"✗ Ошибка при инициализации базы данных: {e}")
     else:
         logger.info("Инициализация базы данных отключена через настройки")
+
+
+# Регистрируем обработчики исключений
+app.add_exception_handler(401, unauthorized_exception_handler)
+app.add_exception_handler(
+    HTTPException,
+    lambda req, exc: (
+        unauthorized_exception_handler(req, exc)
+        if exc.status_code == 401
+        else not_found_exception_handler(req, exc) if exc.status_code == 404 else None
+    ),
+)
+app.add_exception_handler(
+    StarletteHTTPException,
+    lambda req, exc: (
+        unauthorized_exception_handler(req, exc)
+        if exc.status_code == 401
+        else not_found_exception_handler(req, exc) if exc.status_code == 404 else None
+    ),
+)
+app.add_exception_handler(404, not_found_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 
 # Корневой маршрут для проверки работы API
