@@ -560,28 +560,6 @@ endblock %} {% block additional_styles %}
     });
   });
 
-  async function startGameSession(gameType) {
-    try {
-      const response = await fetch("/api/game/start", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ game_type: gameType }), // This parameter is required
-      });
-
-      const data = await response.json();
-      gameSession = data.session_id;
-      score = 0;
-      correctAnswers = 0;
-      totalQuestions = 0;
-
-      console.log(`Начата новая игровая сессия: ${gameSession}`);
-    } catch (error) {
-      console.error("Ошибка при создании игровой сессии:", error);
-    }
-  }
-
   // Загрузка слов для игры
   async function loadWordsForGame(gameType) {
     try {
@@ -607,7 +585,8 @@ endblock %} {% block additional_styles %}
     }
   }
 
-  // Загрузка игры
+  // Исправление в файле app/templates/game.html
+
   async function loadGame(gameType) {
     // Сбрасываем UI
     feedbackElement.textContent = "";
@@ -620,10 +599,40 @@ endblock %} {% block additional_styles %}
     await startGameSession(gameType);
 
     // Загружаем слова
-    await loadWordsForGame(gameType);
+    currentWords = await loadWordsForGame(gameType); // Добавляем присваивание!
+    currentWordIndex = 0; // Сбрасываем индекс
 
     // Показываем первый вопрос
     showCurrentQuestion();
+  }
+
+  async function startGameSession(gameType) {
+    try {
+      const response = await fetch("/api/game/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ game_type: gameType }),
+      });
+
+      if (!response.ok) {
+        console.error(`Ошибка API: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error(errorText);
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      gameSession = data.session_id;
+      score = 0;
+      correctAnswers = 0;
+      totalQuestions = 0;
+
+      console.log(`Начата новая игровая сессия: ${gameSession}`);
+    } catch (error) {
+      console.error("Ошибка при создании игровой сессии:", error);
+    }
   }
 
   // Показать текущий вопрос

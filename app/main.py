@@ -12,7 +12,7 @@ from app.error_handlers import (
 )
 import logging
 
-from app.routes import auth, index, user, game, admin  # Добавлен импорт admin
+from app.routes import auth, index, user, game, admin
 from app.config import settings
 from app.templates import templates
 from app.setup_database import setup_database
@@ -25,7 +25,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()],
 )
 
-# Определение logger - добавляем эту строку!
+# Определение logger
 logger = logging.getLogger(__name__)
 
 logging.getLogger("sqlalchemy.engine").propagate = False
