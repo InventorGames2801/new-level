@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import logging
 
-from app.routes import auth, index, user, game
+from app.routes import auth, index, user, game, admin  # Добавлен импорт admin
 from app.config import settings
 from app.templates import templates
 from app.setup_database import setup_database
@@ -28,6 +28,7 @@ app.include_router(auth.router)  # Маршруты аутентификации
 app.include_router(index.router)  # Основные маршруты (главная страница)
 app.include_router(user.router)  # Маршруты профиля пользователя
 app.include_router(game.router)  # Маршруты игрового процесса
+app.include_router(admin.router)  # Маршруты администратора (добавлено)
 
 # Настройка middleware для сессий
 app.add_middleware(

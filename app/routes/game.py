@@ -207,10 +207,16 @@ def check_word_answer(
 
         # Проверяем ответ в зависимости от типа игры
         correct = False
+
+        # Нормализуем строки для сравнения: удаляем пробелы, приводим к нижнему регистру
+        answer_clean = answer.lower().strip()
+
         if word.game_type == "scramble" or word.game_type == "typing":
-            correct = answer.lower().strip() == word.text.lower().strip()
+            word_text_clean = word.text.lower().strip()
+            correct = answer_clean == word_text_clean
         elif word.game_type == "matching":
-            correct = answer.lower().strip() == word.translation.lower().strip()
+            translation_clean = word.translation.lower().strip()
+            correct = answer_clean == translation_clean
 
         # Обновляем статистику слова
         database.update_word_stats(db, word_id, correct)
@@ -221,4 +227,69 @@ def check_word_answer(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при проверке ответа",
+        )
+
+
+@router.get("/api/words/{game_type}")
+def get_words_for_game(
+    game_type: str,
+    count: int = 5,
+    difficulty: Optional[str] = None,
+    word_id: Optional[int] = None,  # Добавлен параметр для получения конкретного слова
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Возвращает случайные слова для игры или конкретное слово по ID.
+    """
+    try:
+        if game_type not in ["scramble", "matching", "typing"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный тип игры"
+            )
+
+        # Если указан конкретный ID слова, возвращаем только его
+        if word_id:
+            word = db.query(Word).filter(Word.id == word_id).first()
+            if not word:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="Слово не найдено"
+                )
+            words = [word]
+        else:
+            # Если не указана сложность, выбираем в зависимости от уровня пользователя
+            if not difficulty:
+                # Простая логика: уровни 1-3 - easy, 4-7 - medium, 8+ - hard
+                if current_user.level < 4:
+                    difficulty = "easy"
+                elif current_user.level < 8:
+                    difficulty = "medium"
+                else:
+                    difficulty = "hard"
+
+            words = database.get_random_words(db, game_type, count, difficulty)
+
+        # Преобразуем в формат, подходящий для игры
+        result = []
+        for word in words:
+            word_data = {"id": word.id, "difficulty": word.difficulty}
+
+            if game_type == "scramble":
+                word_data["text"] = word.text
+                word_data["scrambled"] = word.scrambled
+            elif game_type == "matching":
+                word_data["text"] = word.text
+                word_data["translation"] = word.translation
+            elif game_type == "typing":
+                word_data["text"] = word.text
+                word_data["description"] = word.description
+
+            result.append(word_data)
+
+        return result
+    except Exception as e:
+        logger.error(f"Ошибка при получении слов для игры: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при получении слов для игры",
         )

@@ -1,0 +1,30 @@
+name: newlevel-prod
+
+services:
+  # Backend FastAPI c SQLite
+  backend:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    container_name: newlevel_app_prod
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/newlevel.db
+      - PYTHONPATH=/app
+    ports:
+      - "8000:8000"
+    volumes:
+      - sqlite_data:/app/data # Только volume для базы, без hot-reload кода!
+    command: >
+      bash -c "
+        echo 'Создаём директорию для базы данных...' &&
+        mkdir -p /app/data &&
+        chmod 777 /app/data &&
+        echo 'Запуск приложения...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
+      "
+
+volumes:
+  sqlite_data:

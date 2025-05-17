@@ -1,0 +1,176 @@
+{% extends "layout.html" %}
+{% block title %}New Level - Редактирование слова{% endblock %}
+
+{% block additional_styles %}
+.admin-container {
+  margin-top: 120px;
+  padding: 30px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+  margin-bottom: 60px;
+}
+
+.admin-title {
+  color: var(--secondary);
+  margin-bottom: 25px;
+  font-size: 24px;
+  text-align: center;
+}
+
+.edit-form {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #444;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.form-control:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(148, 0, 211, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+}
+
+.btn-save {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-save:hover {
+  background: var(--secondary);
+  transform: translateY(-2px);
+}
+
+.btn-cancel {
+  background: #f5f5f5;
+  color: #444;
+  border: 1px solid #ddd;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  text-decoration: none;
+}
+
+.btn-cancel:hover {
+  background: #e0e0e0;
+}
+
+.dynamic-fields {
+  margin-top: 15px;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  background: #f9f9f9;
+}
+{% endblock %}
+
+{% block content %}
+<div class="container admin-container">
+  <h2 class="admin-title">Редактирование слова</h2>
+  
+  <form class="edit-form" method="post" action="/admin/words/{{ word.id }}/edit">
+    <div class="form-group">
+      <label for="text">Слово:</label>
+      <input type="text" id="text" name="text" class="form-control" value="{{ word.text }}" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="game_type">Тип игры:</label>
+      <select id="game_type" name="game_type" class="form-control" required onchange="showFields()">
+        <option value="scramble" {% if word.game_type == 'scramble' %}selected{% endif %}>Анаграммы</option>
+        <option value="matching" {% if word.game_type == 'matching' %}selected{% endif %}>Сопоставление</option>
+        <option value="typing" {% if word.game_type == 'typing' %}selected{% endif %}>Написание слов</option>
+      </select>
+    </div>
+    
+    <div id="scramble-fields" class="dynamic-fields" {% if word.game_type != 'scramble' %}style="display:none;"{% endif %}>
+      <div class="form-group">
+        <label for="scrambled">Перемешанное слово:</label>
+        <input type="text" id="scrambled" name="scrambled" class="form-control" value="{{ word.scrambled }}">
+        <small>Оставьте пустым для автоматического создания</small>
+      </div>
+    </div>
+    
+    <div id="matching-fields" class="dynamic-fields" {% if word.game_type != 'matching' %}style="display:none;"{% endif %}>
+      <div class="form-group">
+        <label for="translation">Перевод:</label>
+        <input type="text" id="translation" name="translation" class="form-control" value="{{ word.translation }}">
+      </div>
+    </div>
+    
+    <div id="typing-fields" class="dynamic-fields" {% if word.game_type != 'typing' %}style="display:none;"{% endif %}>
+      <div class="form-group">
+        <label for="description">Описание:</label>
+        <textarea id="description" name="description" class="form-control" rows="3">{{ word.description }}</textarea>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label for="difficulty">Сложность:</label>
+      <select id="difficulty" name="difficulty" class="form-control" required>
+        <option value="easy" {% if word.difficulty == 'easy' %}selected{% endif %}>Легкий</option>
+        <option value="medium" {% if word.difficulty == 'medium' %}selected{% endif %}>Средний</option>
+        <option value="hard" {% if word.difficulty == 'hard' %}selected{% endif %}>Сложный</option>
+      </select>
+    </div>
+    
+    <div class="form-actions">
+      <a href="/admin" class="btn-cancel">Отмена</a>
+      <button type="submit" class="btn-save">Сохранить</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function showFields() {
+    const gameType = document.getElementById('game_type').value;
+    
+    // Скрываем все поля
+    document.getElementById('scramble-fields').style.display = 'none';
+    document.getElementById('matching-fields').style.display = 'none';
+    document.getElementById('typing-fields').style.display = 'none';
+    
+    // Показываем только нужные поля
+    if (gameType === 'scramble') {
+      document.getElementById('scramble-fields').style.display = 'block';
+    } else if (gameType === 'matching') {
+      document.getElementById('matching-fields').style.display = 'block';
+    } else if (gameType === 'typing') {
+      document.getElementById('typing-fields').style.display = 'block';
+    }
+  }
+</script>
+{% endblock %}

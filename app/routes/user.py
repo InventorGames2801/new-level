@@ -67,10 +67,10 @@ def show_profile(
     """
     try:
         # Получаем статистику пользователя
-        stats = api.get_user_stats(db, current_user.id)
+        stats = database.get_user_stats(db, current_user.id)
 
         # Рассчитываем прогресс до следующего уровня
-        exp_for_level_up = api.get_game_setting_int(db, "points_for_level_up", 100)
+        exp_for_level_up = database.get_game_setting_int(db, "points_for_level_up", 100)
         progress_percent = int((current_user.experience / exp_for_level_up) * 100)
 
         return templates.TemplateResponse(

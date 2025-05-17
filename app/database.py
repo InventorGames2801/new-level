@@ -58,17 +58,43 @@ def get_db():
 
 
 def init_db():
-    """
-    Инициализирует базу данных (создает таблицы).
-    Вызывается отдельно при запуске приложения.
-    """
     try:
-        # Создаем таблицы
         from app.models import Base
 
-        logger.info("Создаем таблицы в базе данных...")
         Base.metadata.create_all(bind=engine)
         logger.info("Таблицы успешно созданы.")
+
+        admin_name = os.getenv("ADMIN_NAME")
+        admin_email = os.getenv("ADMIN_EMAIL")
+        admin_password = os.getenv("ADMIN_PASSWORD")
+
+        if admin_name and admin_email and admin_password:
+            db = SessionLocal()
+            existing = db.query(User).filter(User.email == admin_email).first()
+            if not existing:
+                hashed_password = get_password_hash(admin_password)
+                admin = User(
+                    name=admin_name,
+                    email=admin_email,
+                    password_hash=hashed_password,
+                    role="admin",
+                )
+                db.add(admin)
+                db.commit()
+                logger.info(
+                    f"Администратор успешно создан:\n"
+                    f"  Email: {admin_email}\n"
+                    f"  Пароль: {admin_password}"
+                )
+            else:
+                logger.info(f"Администратор уже существует: {admin_email}.")
+                # (Не рекомендуется!) Если хотите, можно дополнительно вывести текущий пароль из env:
+                # logger.info(f"Пароль администратора (из .env): {admin_password}")
+            db.close()
+        else:
+            logger.warning(
+                "Не указаны переменные ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD"
+            )
         return True
     except Exception as e:
         logger.error(f"Ошибка при создании таблиц: {e}")
