@@ -5,39 +5,40 @@ from typing import Optional
 
 load_dotenv()  # Загружаем переменные окружения из .env файла
 
+
 class Settings(BaseSettings):
     """
     Централизованная конфигурация приложения на основе переменных окружения.
-    
+
     Pydantic автоматически загружает значения из переменных окружения,
     а если они не заданы, использует значения по умолчанию.
     """
-    API_V1_PREFIX: str = "/api/v1"
+
     PROJECT_NAME: str = "FastAPI Demo App"
-    
-    DATABASE_URL: str 
-    
+
+    DATABASE_URL: str
+
     # Настройки JWT токенов
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
+
     # Настройки отладки
     DEBUG: bool = False
-    
+
     # Инициализация базы данных при запуске
     INIT_DB: bool = False
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
-        
-        # Для Pydantic 2.x - разрешить пропускать валидацию некоторых полей
-        # и преобразовывать строки типа "true", "false" в bool
-        validate_assignment = True
-        extra = "allow"  # Разрешить дополнительные поля
-        str_strip_whitespace = True
+
+    # Новый способ конфигурации в Pydantic v2
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": True,
+        "validate_assignment": True,
+        "extra": "allow",
+        "str_strip_whitespace": True,
+    }
+
 
 # Создаем экземпляр настроек для использования в приложении
 settings = Settings()

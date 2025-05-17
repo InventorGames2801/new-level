@@ -35,7 +35,7 @@ class UserProfile(UserBase):
     total_points: int
 
     class Config:
-        orm_mode = True
+        model_config = {"from_attributes": True}
 
 
 class UserStats(BaseModel):
@@ -48,7 +48,7 @@ class UserStats(BaseModel):
     correct_answers: int
 
     class Config:
-        orm_mode = True
+        model_config = {"from_attributes": True}
 
 
 # === Слова и игры ===
@@ -91,7 +91,7 @@ class WordRead(WordBase):
     times_correct: int
 
     class Config:
-        orm_mode = True
+        model_config = {"from_attributes": True}
 
 
 # === Игровые сессии ===
@@ -131,7 +131,7 @@ class GameSessionRead(GameSessionBase):
     total_questions: int
 
     class Config:
-        orm_mode = True
+        model_config = {"from_attributes": True}
 
 
 # === Авторизация ===

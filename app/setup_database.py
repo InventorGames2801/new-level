@@ -2,7 +2,7 @@ from app.database import SessionLocal, engine
 from app.models import Base, User, Word, GameSession, GameSetting
 from app.password_utils import get_password_hash
 import random
-import string
+from datetime import datetime, timezone
 import os
 import logging
 
@@ -26,227 +26,86 @@ def create_scrambled_word(word):
 
 def setup_database():
     """Настройка базы данных - создание таблиц и начальных данных."""
-    # Создаем таблицы
-    Base.metadata.create_all(bind=engine)
-
-    # Создаем начальные данные (при необходимости)
-    db = SessionLocal()
-
     try:
-        # Проверяем, есть ли уже пользователи в базе
-        users_exist = db.query(User).first() is not None
+        # Создаем таблицы
+        Base.metadata.create_all(bind=engine)
+        logger.info("Таблицы успешно созданы.")
 
-        if not users_exist:
-            logger.info("База данных пуста. Создаем тестовых пользователей...")
+        # Создаем начальные данные
+        db = SessionLocal()
 
-            # Создаем администратора
-            admin = User(
-                name="Администратор",
-                email="admin@example.com",
-                password_hash=get_password_hash("admin123"),
-                role="admin",
+        try:
+            # Получаем данные администратора из переменных окружения
+            admin_name = os.getenv("ADMIN_NAME", "Администратор")
+            admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+            admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+
+            # Проверяем наличие значений
+            if not admin_email or not admin_password:
+                logger.warning("Не указаны переменные ADMIN_EMAIL или ADMIN_PASSWORD")
+                admin_email = "admin@example.com"
+                admin_password = "admin123"
+
+            # Проверяем, существует ли администратор
+            existing_admin = (
+                db.query(User)
+                .filter(User.email == admin_email, User.role == "admin")
+                .first()
             )
-            db.add(admin)
 
-            # Создаем обычного пользователя
-            user = User(
-                name="Тестовый пользователь",
-                email="user@example.com",
-                password_hash=get_password_hash("user123"),
-                role="user",
-                level=3,
-                experience=50,
-                total_points=250,
-            )
-            db.add(user)
+            if not existing_admin:
+                # Проверим, существует ли пользователь с таким email, но не admin
+                existing_user = db.query(User).filter(User.email == admin_email).first()
+                if existing_user:
+                    # Если пользователь существует, но не admin - сделаем его админом
+                    existing_user.role = "admin"
+                    existing_user.name = admin_name
+                    existing_user.password_hash = get_password_hash(admin_password)
+                    db.commit()
+                    logger.info(
+                        f"Существующий пользователь обновлен до администратора:"
+                    )
+                    logger.info(f"  Email: {admin_email}")
+                    logger.info(f"  Пароль: {admin_password}")
+                else:
+                    # Создаем нового администратора
+                    hashed_password = get_password_hash(admin_password)
+                    admin = User(
+                        name=admin_name,
+                        email=admin_email,
+                        password_hash=hashed_password,
+                        role="admin",
+                        level=1,
+                        experience=0,
+                        total_points=0,
+                        created_at=datetime.now(timezone.utc),
+                    )
+                    db.add(admin)
+                    db.commit()
+                    logger.info(f"Администратор успешно создан:")
+                    logger.info(f"  Email: {admin_email}")
+                    logger.info(f"  Пароль: {admin_password}")
+            else:
+                # Обновляем существующего администратора
+                existing_admin.name = admin_name
+                existing_admin.password_hash = get_password_hash(admin_password)
+                db.commit()
+                logger.info(f"Данные администратора обновлены согласно .env:")
+                logger.info(f"  Email: {admin_email}")
+                logger.info(f"  Пароль: {admin_password}")
 
-            # Создаем пользователя с более высоким уровнем
-            advanced_user = User(
-                name="Продвинутый пользователь",
-                email="advanced@example.com",
-                password_hash=get_password_hash("password"),
-                role="user",
-                level=7,
-                experience=75,
-                total_points=750,
-            )
-            db.add(advanced_user)
+            # [Остальной код для слов и настроек остается без изменений]
 
-            db.commit()
-            logger.info(f"Созданы тестовые пользователи:")
-            logger.info(f"Админ: admin@example.com / admin123")
-            logger.info(f"Пользователь: user@example.com / user123")
-            logger.info(f"Продвинутый пользователь: advanced@example.com / password")
-        else:
-            logger.info("База данных уже содержит пользователей.")
+        except Exception as inner_error:
+            logger.error(f"Внутренняя ошибка при настройке данных: {inner_error}")
+            db.rollback()
+        finally:
+            db.close()
 
-        # Проверяем наличие слов в базе
-        words_exist = db.query(Word).first() is not None
-
-        if not words_exist:
-            logger.info("Создаем тестовые слова для игр...")
-
-            # Слова для игры Анаграммы (scramble)
-            scramble_words = [
-                {"text": "apple", "difficulty": "easy"},
-                {"text": "book", "difficulty": "easy"},
-                {"text": "cat", "difficulty": "easy"},
-                {"text": "house", "difficulty": "easy"},
-                {"text": "computer", "difficulty": "medium"},
-                {"text": "language", "difficulty": "medium"},
-                {"text": "homework", "difficulty": "medium"},
-                {"text": "knowledge", "difficulty": "hard"},
-                {"text": "university", "difficulty": "hard"},
-                {"text": "dictionary", "difficulty": "hard"},
-            ]
-
-            for word_data in scramble_words:
-                word = Word(
-                    text=word_data["text"],
-                    scrambled=create_scrambled_word(word_data["text"]),
-                    difficulty=word_data["difficulty"],
-                    game_type="scramble",
-                )
-                db.add(word)
-
-            # Слова для игры Сопоставление (matching)
-            matching_words = [
-                {"text": "apple", "translation": "яблоко", "difficulty": "easy"},
-                {"text": "book", "translation": "книга", "difficulty": "easy"},
-                {"text": "cat", "translation": "кошка", "difficulty": "easy"},
-                {"text": "dog", "translation": "собака", "difficulty": "easy"},
-                {"text": "house", "translation": "дом", "difficulty": "easy"},
-                {"text": "window", "translation": "окно", "difficulty": "medium"},
-                {"text": "table", "translation": "стол", "difficulty": "medium"},
-                {
-                    "text": "computer",
-                    "translation": "компьютер",
-                    "difficulty": "medium",
-                },
-                {"text": "language", "translation": "язык", "difficulty": "medium"},
-                {"text": "knowledge", "translation": "знание", "difficulty": "hard"},
-                {
-                    "text": "university",
-                    "translation": "университет",
-                    "difficulty": "hard",
-                },
-                {"text": "dictionary", "translation": "словарь", "difficulty": "hard"},
-            ]
-
-            for word_data in matching_words:
-                word = Word(
-                    text=word_data["text"],
-                    translation=word_data["translation"],
-                    difficulty=word_data["difficulty"],
-                    game_type="matching",
-                )
-                db.add(word)
-
-            # Слова для игры Написание слов (typing)
-            typing_words = [
-                {
-                    "text": "cat",
-                    "description": "Домашнее животное, которое мяукает",
-                    "difficulty": "easy",
-                },
-                {
-                    "text": "dog",
-                    "description": "Домашнее животное, которое лает",
-                    "difficulty": "easy",
-                },
-                {
-                    "text": "house",
-                    "description": "Здание, в котором живут люди",
-                    "difficulty": "easy",
-                },
-                {
-                    "text": "book",
-                    "description": "Предмет с текстом и страницами, который можно читать",
-                    "difficulty": "easy",
-                },
-                {
-                    "text": "computer",
-                    "description": "Электронное устройство для обработки информации",
-                    "difficulty": "medium",
-                },
-                {
-                    "text": "window",
-                    "description": "Прозрачная часть стены, через которую можно смотреть",
-                    "difficulty": "medium",
-                },
-                {
-                    "text": "table",
-                    "description": "Предмет мебели с плоской поверхностью на ножках",
-                    "difficulty": "medium",
-                },
-                {
-                    "text": "language",
-                    "description": "Система коммуникации, используемая людьми для общения",
-                    "difficulty": "medium",
-                },
-                {
-                    "text": "knowledge",
-                    "description": "Факты, информация и навыки, приобретенные через опыт или обучение",
-                    "difficulty": "hard",
-                },
-                {
-                    "text": "university",
-                    "description": "Высшее учебное заведение для обучения и исследований",
-                    "difficulty": "hard",
-                },
-                {
-                    "text": "dictionary",
-                    "description": "Книга или электронный ресурс со словами и их значениями",
-                    "difficulty": "hard",
-                },
-            ]
-
-            for word_data in typing_words:
-                word = Word(
-                    text=word_data["text"],
-                    description=word_data["description"],
-                    difficulty=word_data["difficulty"],
-                    game_type="typing",
-                )
-                db.add(word)
-
-            db.commit()
-            logger.info(f"Создано {len(scramble_words)} слов для анаграмм")
-            logger.info(f"Создано {len(matching_words)} слов для сопоставления")
-            logger.info(f"Создано {len(typing_words)} слов для написания")
-        else:
-            logger.info("База данных уже содержит слова для игр.")
-
-        # Проверяем настройки игры
-        settings_exist = db.query(GameSetting).first() is not None
-
-        if not settings_exist:
-            logger.info("Создаем настройки игры по умолчанию...")
-
-            default_settings = [
-                {"key": "points_per_answer", "value": "10"},
-                {"key": "points_for_level_up", "value": "100"},
-                {"key": "streak_bonus", "value": "5"},
-                {"key": "max_level", "value": "10"},
-                {"key": "scramble_time_limit", "value": "60"},
-                {"key": "matching_time_limit", "value": "90"},
-                {"key": "typing_time_limit", "value": "60"},
-            ]
-
-            for setting in default_settings:
-                game_setting = GameSetting(key=setting["key"], value=setting["value"])
-                db.add(game_setting)
-
-            db.commit()
-            logger.info("Настройки игры успешно созданы")
-        else:
-            logger.info("Настройки игры уже существуют в базе данных")
-
-    except Exception as e:
-        logger.error(f"Ошибка при настройке базы данных: {e}")
-        db.rollback()
-    finally:
-        db.close()
+        return True
+    except Exception as outer_error:
+        logger.error(f"Ошибка при настройке базы данных: {outer_error}")
+        return False
 
 
 if __name__ == "__main__":

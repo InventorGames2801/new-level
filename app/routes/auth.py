@@ -5,6 +5,7 @@ from app.models import User
 from app.auth_utils import get_db
 from app.password_utils import get_password_hash, verify_password
 from app.templates import templates
+from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -30,6 +31,11 @@ def process_login(
         return templates.TemplateResponse(
             "login.html", {"request": request, "error": error_msg, "email": email}
         )
+
+    # Добавляем: обновляем last_login при успешном входе
+    user.last_login = datetime.now(timezone.utc)
+    db.commit()  # Сохраняем изменения в БД
+
     # Успешный вход: сохраняем user_id и роль в сессию
     request.session["user_id"] = user.id
     request.session["role"] = user.role

@@ -12,9 +12,15 @@ from app.setup_database import setup_database
 # Настройка логирования
 level = logging.DEBUG if settings.DEBUG else logging.INFO
 logging.basicConfig(
-    level=level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=level,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
 )
+
+# Определение logger - добавляем эту строку!
 logger = logging.getLogger(__name__)
+
+logging.getLogger("sqlalchemy.engine").propagate = False
 
 # Инициализация FastAPI приложения
 app = FastAPI(

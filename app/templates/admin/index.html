@@ -1,503 +1,224 @@
-{% extends "base.html" %} {% block title %}Панель администратора{% endblock %}
+{% extends "layout.html" %}
+{% block title %}Административная панель{% endblock %}
+
+{% block additional_styles %}
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #CCCCFF; /* Лавандовый фон */
+  }
+  
+  .admin-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  /* Навигационные вкладки */
+  .admin-nav {
+    display: flex;
+    border-bottom: 1px solid #9400D3;
+    margin-bottom: 20px;
+  }
+  
+  .admin-nav a {
+    padding: 10px 20px;
+    text-decoration: none;
+    color: black;
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  
+  .admin-nav a.active {
+    border-bottom: 3px solid #9400D3;
+    color: #9400D3;
+  }
+  
+  /* Кнопка возврата */
+  .back-button {
+    display: inline-block;
+    border: 2px solid #9400D3;
+    color: #9400D3;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-bottom: 20px;
+  }
+  
+  .back-button:hover {
+    background-color: #9400D3;
+    color: white;
+  }
+  
+  /* Заголовки */
+  h2 {
+    margin: 20px 0;
+    font-size: 24px;
+    color: #333;
+  }
+  
+  /* Блоки статистики */
+  .stat-card {
+    border-radius: 4px;
+    padding: 30px;
+    text-align: center;
+    color: white;
+    margin-bottom: 20px;
+  }
+  
+  .stat-card.green {
+    background-color: #2E8B57; /* Зеленый */
+  }
+  
+  .stat-card.blue {
+    background-color: #1E90FF; /* Синий */
+  }
+  
+  .stat-card h1 {
+    font-size: 48px;
+    margin: 10px 0;
+  }
+  
+  /* Таблицы */
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0 30px 0;
+  }
+  
+  .admin-table th, .admin-table td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ddd;
+  }
+  
+  .admin-table th {
+    background-color: #F8F8FF; /* Очень светлый лавандовый */
+    color: #333;
+  }
+  
+  .admin-table tr:nth-child(odd) {
+    background-color: #DADAFF; /* Более темный лавандовый */
+  }
+  
+  .admin-table tr:nth-child(even) {
+    background-color: #E8E8FF; /* Светлый лавандовый */
+  }
+  
+  /* Формы */
+  .admin-form {
+    background-color: #F8F8FF;
+    padding: 20px;
+    border-radius: 4px;
+    margin-bottom: 30px;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  /* Кнопки */
+  .btn-primary {
+    background-color: #9400D3;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .btn-sm {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  
+  /* Секции */
+  .admin-section {
+    margin-bottom: 40px;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container my-4">
-  <h1 class="mb-4">Панель администратора</h1>
-  <div class="alert alert-info">
-    Вы вошли как администратор: {{ admin_user.name }}
+<div class="admin-container">
+  <!-- Навигационные вкладки -->
+  <div class="admin-nav">
+    <a href="/admin" {% if active_tab == 'stats' or not active_tab %}class="active"{% endif %}>Статистика</a>
+    <a href="/admin/users" {% if active_tab == 'users' %}class="active"{% endif %}>Пользователи</a>
+    <a href="/admin/dictionary" {% if active_tab == 'dictionary' %}class="active"{% endif %}>Словарь</a>
+    <a href="/admin/settings" {% if active_tab == 'settings' %}class="active"{% endif %}>Настройки</a>
   </div>
-
-  <!-- Навигация по вкладкам -->
-  <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
-    <li class="nav-item">
-      <a
-        class="nav-link active"
-        id="users-tab"
-        data-toggle="tab"
-        href="#users"
-        role="tab"
-        aria-controls="users"
-        aria-selected="true"
-        >Пользователи</a
-      >
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        id="words-tab"
-        data-toggle="tab"
-        href="#words"
-        role="tab"
-        aria-controls="words"
-        aria-selected="false"
-        >Слова</a
-      >
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        id="settings-tab"
-        data-toggle="tab"
-        href="#settings"
-        role="tab"
-        aria-controls="settings"
-        aria-selected="false"
-        >Настройки</a
-      >
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        id="stats-tab"
-        data-toggle="tab"
-        href="#stats"
-        role="tab"
-        aria-controls="stats"
-        aria-selected="false"
-        >Статистика</a
-      >
-    </li>
-  </ul>
-
-  <!-- Содержимое вкладок -->
-  <div class="tab-content" id="adminTabsContent">
-    <!-- Пользователи -->
-    <div
-      class="tab-pane fade show active"
-      id="users"
-      role="tabpanel"
-      aria-labelledby="users-tab"
-    >
-      <h3>Управление пользователями</h3>
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Имя</th>
-            <th>Email</th>
-            <th>Роль</th>
-            <th>Уровень</th>
-            <th>Дата регистрации</th>
-            <th>Действия</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for user in users %}
-          <tr>
-            <td>{{ user.id }}</td>
-            <td>{{ user.name }}</td>
-            <td>{{ user.email }}</td>
-            <td>{{ user.role }}</td>
-            <td>{{ user.level }}</td>
-            <td>{{ user.created_at.strftime('%d.%m.%Y') }}</td>
-            <td>
-              <div class="btn-group">
-                <a
-                  href="/admin/users/{{ user.id }}/edit"
-                  class="btn btn-sm btn-primary"
-                  >Изменить</a
-                >
-                <form
-                  action="/admin/users/{{ user.id }}/delete"
-                  method="post"
-                  onsubmit="return confirm('Вы уверены, что хотите удалить пользователя?');"
-                  class="d-inline"
-                >
-                  <button type="submit" class="btn btn-sm btn-danger">
-                    Удалить
-                  </button>
-                </form>
-                <form
-                  action="/admin/users/{{ user.id }}/toggle_admin"
-                  method="post"
-                  class="d-inline"
-                >
-                  <label class="switch">
-                    <input type="checkbox" name="is_admin"
-                    onchange="this.form.submit()" {% if user.role == 'admin'
-                    %}checked{% endif %}>
-                    <span class="slider round"></span>
-                  </label>
-                </form>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-      <!-- Форма добавления пользователя -->
-      <div class="card mt-4">
-        <div class="card-header">
-          <h5>Добавить нового пользователя</h5>
-        </div>
-        <div class="card-body">
-          <form action="/admin/users/create" method="post">
-            <div class="form-group row">
-              <label class="col-sm-2 col-form-label">Имя:</label>
-              <div class="col-sm-10">
-                <input type="text" name="name" class="form-control" required />
-              </div>
-            </div>
-            <div class="form-group row">
-              <label class="col-sm-2 col-form-label">Email:</label>
-              <div class="col-sm-10">
-                <input
-                  type="email"
-                  name="email"
-                  class="form-control"
-                  required
-                />
-              </div>
-            </div>
-            <div class="form-group row">
-              <label class="col-sm-2 col-form-label">Пароль:</label>
-              <div class="col-sm-10">
-                <input
-                  type="password"
-                  name="password"
-                  class="form-control"
-                  required
-                />
-              </div>
-            </div>
-            <div class="form-group row">
-              <label class="col-sm-2 col-form-label">Роль:</label>
-              <div class="col-sm-10">
-                <select name="role" class="form-control">
-                  <option value="user">Пользователь</option>
-                  <option value="admin">Администратор</option>
-                </select>
-              </div>
-            </div>
-            <button type="submit" class="btn btn-success">
-              Добавить пользователя
-            </button>
-          </form>
-        </div>
-      </div>
+  
+  <!-- Кнопка возврата -->
+  <a href="/" class="back-button">Вернуться на сайт</a>
+  
+  <!-- Статистика приложения -->
+  <div class="admin-section">
+    <h2>Статистика приложения</h2>
+    
+    <!-- Зеленый блок статистики -->
+    <div class="stat-card green">
+      <h1>{{ words|length }}</h1>
+      <div>Всего слов</div>
     </div>
-
-    <!-- Слова -->
-    <div
-      class="tab-pane fade"
-      id="words"
-      role="tabpanel"
-      aria-labelledby="words-tab"
-    >
-      <h3>Управление словами</h3>
-
-      <!-- Фильтр слов -->
-      <div class="mb-3">
-        <form action="/admin/words" method="get" class="form-inline">
-          <div class="form-group mr-2">
-            <select name="game_type" class="form-control">
-              <option value="">Все типы</option>
-              <option value="scramble">Анаграммы</option>
-              <option value="matching">Сопоставление</option>
-              <option value="typing">Написание слов</option>
-            </select>
-          </div>
-          <div class="form-group mr-2">
-            <select name="difficulty" class="form-control">
-              <option value="">Все уровни</option>
-              <option value="easy">Легкий</option>
-              <option value="medium">Средний</option>
-              <option value="hard">Сложный</option>
-            </select>
-          </div>
-          <button type="submit" class="btn btn-primary">Фильтровать</button>
-        </form>
-      </div>
-
-      <!-- Таблица слов -->
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Слово</th>
-            <th>Перевод/Описание</th>
-            <th>Тип игры</th>
-            <th>Сложность</th>
-            <th>Показано</th>
-            <th>Правильно</th>
-            <th>Действия</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for word in words %}
-          <tr>
-            <td>{{ word.id }}</td>
-            <td>{{ word.text }}</td>
-            <td>
-              {% if word.translation %} {{ word.translation }} {% elif
-              word.description %} {{ word.description }} {% elif word.scrambled
-              %} {{ word.scrambled }} {% endif %}
-            </td>
-            <td>{{ word.game_type }}</td>
-            <td>{{ word.difficulty }}</td>
-            <td>{{ word.times_shown }}</td>
-            <td>{{ word.times_correct }}</td>
-            <td>
-              <div class="btn-group">
-                <a
-                  href="/admin/words/{{ word.id }}/edit"
-                  class="btn btn-sm btn-primary"
-                  >Изменить</a
-                >
-                <form
-                  action="/admin/words/{{ word.id }}/delete"
-                  method="post"
-                  onsubmit="return confirm('Вы уверены, что хотите удалить слово?');"
-                  class="d-inline"
-                >
-                  <button type="submit" class="btn btn-sm btn-danger">
-                    Удалить
-                  </button>
-                </form>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-      <!-- Форма добавления слова -->
-      <div class="card mt-4">
-        <div class="card-header">
-          <h5>Добавить новое слово</h5>
-        </div>
-        <div class="card-body">
-          <form action="/admin/words/create" method="post">
-            <div class="form-group row">
-              <label class="col-sm-2 col-form-label">Слово:</label>
-              <div class="col-sm-10">
-                <input type="text" name="text" class="form-control" required />
-              </div>
-            </div>
-            <div class="form-group row">
-              <label class="col-sm-2 col-form-label">Тип игры:</label>
-              <div class="col-sm-10">
-                <select
-                  name="game_type"
-                  class="form-control"
-                  id="gameTypeSelect"
-                  required
-                >
-                  <option value="scramble">Анаграммы</option>
-                  <option value="matching">Сопоставление</option>
-                  <option value="typing">Написание слов</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Динамические поля в зависимости от типа игры -->
-            <div id="scrambleFields" class="dynamic-fields">
-              <div class="form-group row">
-                <label class="col-sm-2 col-form-label"
-                  >Перемешанное слово:</label
-                >
-                <div class="col-sm-10">
-                  <input type="text" name="scrambled" class="form-control" />
-                  <small class="form-text text-muted"
-                    >Оставьте пустым для автоматического создания</small
-                  >
-                </div>
-              </div>
-            </div>
-
-            <div
-              id="matchingFields"
-              class="dynamic-fields"
-              style="display: none"
-            >
-              <div class="form-group row">
-                <label class="col-sm-2 col-form-label">Перевод:</label>
-                <div class="col-sm-10">
-                  <input type="text" name="translation" class="form-control" />
-                </div>
-              </div>
-            </div>
-
-            <div id="typingFields" class="dynamic-fields" style="display: none">
-              <div class="form-group row">
-                <label class="col-sm-2 col-form-label">Описание:</label>
-                <div class="col-sm-10">
-                  <textarea
-                    name="description"
-                    class="form-control"
-                    rows="3"
-                  ></textarea>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group row">
-              <label class="col-sm-2 col-form-label">Сложность:</label>
-              <div class="col-sm-10">
-                <select name="difficulty" class="form-control" required>
-                  <option value="easy">Легкий</option>
-                  <option value="medium">Средний</option>
-                  <option value="hard">Сложный</option>
-                </select>
-              </div>
-            </div>
-
-            <button type="submit" class="btn btn-success">
-              Добавить слово
-            </button>
-          </form>
-        </div>
-      </div>
+    
+    <!-- Синий блок статистики -->
+    <div class="stat-card blue">
+      <h1>{{ games_count }}</h1>
+      <div>Игр сыграно</div>
     </div>
-
-    <!-- Настройки -->
-    <div
-      class="tab-pane fade"
-      id="settings"
-      role="tabpanel"
-      aria-labelledby="settings-tab"
-    >
-      <h3>Настройки приложения</h3>
-
-      <div class="card">
-        <div class="card-body">
-          <form action="/admin/settings/update" method="post">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Параметр</th>
-                  <th>Значение</th>
-                  <th>Описание</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for setting in settings %}
-                <tr>
-                  <td>{{ setting.key }}</td>
-                  <td>
-                    <input
-                      type="text"
-                      name="setting_{{ setting.key }}"
-                      value="{{ setting.value }}"
-                      class="form-control"
-                    />
-                  </td>
-                  <td>
-                    {% if setting.key == "points_per_answer" %} Очки за
-                    правильный ответ {% elif setting.key ==
-                    "points_for_level_up" %} Очки для повышения уровня {% elif
-                    setting.key == "streak_bonus" %} Бонус за серию правильных
-                    ответов {% elif setting.key == "max_level" %} Максимальный
-                    уровень {% elif setting.key == "scramble_time_limit" %}
-                    Лимит времени для анаграмм (сек) {% elif setting.key ==
-                    "matching_time_limit" %} Лимит времени для сопоставления
-                    (сек) {% elif setting.key == "typing_time_limit" %} Лимит
-                    времени для написания слов (сек) {% else %} - {% endif %}
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-
-            <div class="form-row align-items-center mt-3">
-              <div class="col-4">
-                <input
-                  type="text"
-                  name="new_key"
-                  class="form-control"
-                  placeholder="Новый параметр"
-                />
-              </div>
-              <div class="col-4">
-                <input
-                  type="text"
-                  name="new_value"
-                  class="form-control"
-                  placeholder="Значение"
-                />
-              </div>
-              <div class="col-4">
-                <button type="submit" class="btn btn-primary">
-                  Сохранить все настройки
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Статистика -->
-    <div
-      class="tab-pane fade"
-      id="stats"
-      role="tabpanel"
-      aria-labelledby="stats-tab"
-    >
-      <h3>Статистика приложения</h3>
-
-      <div class="row">
-        <div class="col-md-4">
-          <div class="card text-white bg-primary mb-3">
-            <div class="card-header">Всего пользователей</div>
-            <div class="card-body">
-              <h5 class="card-title">{{ users|length }}</h5>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card text-white bg-success mb-3">
-            <div class="card-header">Всего слов</div>
-            <div class="card-body">
-              <h5 class="card-title">{{ words|length }}</h5>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card text-white bg-info mb-3">
-            <div class="card-header">Игр сыграно</div>
-            <div class="card-body">
-              <h5 class="card-title">{{ games_count }}</h5>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <h4 class="mt-4">Распределение слов</h4>
-      <table class="table table-bordered">
-        <thead>
-          <tr>
-            <th></th>
-            <th>Легкие</th>
-            <th>Средние</th>
-            <th>Сложные</th>
-            <th>Всего</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th>Анаграммы</th>
-            <td>{{ words_stats.scramble.easy }}</td>
-            <td>{{ words_stats.scramble.medium }}</td>
-            <td>{{ words_stats.scramble.hard }}</td>
-            <td>{{ words_stats.scramble.total }}</td>
-          </tr>
-          <tr>
-            <th>Сопоставление</th>
-            <td>{{ words_stats.matching.easy }}</td>
-            <td>{{ words_stats.matching.medium }}</td>
-            <td>{{ words_stats.matching.hard }}</td>
-            <td>{{ words_stats.matching.total }}</td>
-          </tr>
-          <tr>
-            <th>Написание слов</th>
-            <td>{{ words_stats.typing.easy }}</td>
-            <td>{{ words_stats.typing.medium }}</td>
-            <td>{{ words_stats.typing.hard }}</td>
-            <td>{{ words_stats.typing.total }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    
+    <!-- Таблица распределения -->
+    <h3>Распределение слов по категориям</h3>
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Легкие</th>
+          <th>Средние</th>
+          <th>Сложные</th>
+          <th>Всего</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Анаграммы</td>
+          <td>{{ words_stats.scramble.easy }}</td>
+          <td>{{ words_stats.scramble.medium }}</td>
+          <td>{{ words_stats.scramble.hard }}</td>
+          <td>{{ words_stats.scramble.total }}</td>
+        </tr>
+        <tr>
+          <td>Сопоставление</td>
+          <td>{{ words_stats.matching.easy }}</td>
+          <td>{{ words_stats.matching.medium }}</td>
+          <td>{{ words_stats.matching.hard }}</td>
+          <td>{{ words_stats.matching.total }}</td>
+        </tr>
+        <tr>
+          <td>Написание слов</td>
+          <td>{{ words_stats.typing.easy }}</td>
+          <td>{{ words_stats.typing.medium }}</td>
+          <td>{{ words_stats.typing.hard }}</td>
+          <td>{{ words_stats.typing.total }}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </div>
+{% endblock %}

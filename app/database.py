@@ -88,8 +88,7 @@ def init_db():
                 )
             else:
                 logger.info(f"Администратор уже существует: {admin_email}.")
-                # (Не рекомендуется!) Если хотите, можно дополнительно вывести текущий пароль из env:
-                # logger.info(f"Пароль администратора (из .env): {admin_password}")
+                logger.info(f"Пароль администратора (из .env): {admin_password}")
             db.close()
         else:
             logger.warning(

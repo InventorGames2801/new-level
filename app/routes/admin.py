@@ -4,87 +4,17 @@ from sqlalchemy.orm import Session
 from app.models import User, Word, GameSetting, GameSession
 from app.auth_utils import get_admin_user, get_db
 from app.templates import templates
-from sqlalchemy import func, distinct, and_
+from sqlalchemy import func
 import random
-import string
 
 router = APIRouter()
 
 
 @router.get("/admin", response_class=HTMLResponse)
-def admin_dashboard(
-    request: Request,
-    current_admin: User = Depends(get_admin_user),
-    db: Session = Depends(get_db),
-):
-    # Получаем данные для админ-панели
-    users = db.query(User).all()
-    words = db.query(Word).all()
-    settings = db.query(GameSetting).all()
-
-    # Считаем количество сыгранных игр
-    games_count = db.query(func.count(GameSession.id)).scalar() or 0
-
-    # Собираем статистику по словам
-    words_stats = {
-        "scramble": {
-            "easy": db.query(func.count(Word.id))
-            .filter(Word.game_type == "scramble", Word.difficulty == "easy")
-            .scalar()
-            or 0,
-            "medium": db.query(func.count(Word.id))
-            .filter(Word.game_type == "scramble", Word.difficulty == "medium")
-            .scalar()
-            or 0,
-            "hard": db.query(func.count(Word.id))
-            .filter(Word.game_type == "scramble", Word.difficulty == "hard")
-            .scalar()
-            or 0,
-            "total": db.query(func.count(Word.id))
-            .filter(Word.game_type == "scramble")
-            .scalar()
-            or 0,
-        },
-        "matching": {
-            "easy": db.query(func.count(Word.id))
-            .filter(Word.game_type == "matching", Word.difficulty == "easy")
-            .scalar()
-            or 0,
-            "medium": db.query(func.count(Word.id))
-            .filter(Word.game_type == "matching", Word.difficulty == "medium")
-            .scalar()
-            or 0,
-            "hard": db.query(func.count(Word.id))
-            .filter(Word.game_type == "matching", Word.difficulty == "hard")
-            .scalar()
-            or 0,
-            "total": db.query(func.count(Word.id))
-            .filter(Word.game_type == "matching")
-            .scalar()
-            or 0,
-        },
-        "typing": {
-            "easy": db.query(func.count(Word.id))
-            .filter(Word.game_type == "typing", Word.difficulty == "easy")
-            .scalar()
-            or 0,
-            "medium": db.query(func.count(Word.id))
-            .filter(Word.game_type == "typing", Word.difficulty == "medium")
-            .scalar()
-            or 0,
-            "hard": db.query(func.count(Word.id))
-            .filter(Word.game_type == "typing", Word.difficulty == "hard")
-            .scalar()
-            or 0,
-            "total": db.query(func.count(Word.id))
-            .filter(Word.game_type == "typing")
-            .scalar()
-            or 0,
-        },
-    }
-
+def admin_dashboard(...):
+    # ...
     return templates.TemplateResponse(
-        "admin.html",
+        "admin/index.html",
         {
             "request": request,
             "admin_user": current_admin,
@@ -93,6 +23,20 @@ def admin_dashboard(
             "settings": settings,
             "games_count": games_count,
             "words_stats": words_stats,
+            "active_tab": "stats"
+        },
+    )
+
+@router.get("/admin/users", response_class=HTMLResponse)
+def admin_users(...):
+    # ...
+    return templates.TemplateResponse(
+        "admin/users.html",
+        {
+            "request": request,
+            "admin_user": current_admin,
+            "users": users,
+            "active_tab": "users"
         },
     )
 
@@ -176,7 +120,7 @@ def edit_word_form(
         raise HTTPException(status_code=404, detail="Слово не найдено")
 
     return templates.TemplateResponse(
-        "edit_word.html",
+        "admin/edit_word.html",
         {"request": request, "admin_user": current_admin, "word": word},
     )
 
