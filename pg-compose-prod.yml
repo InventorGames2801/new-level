@@ -1,0 +1,46 @@
+name: newlevel-prod
+services:
+  # База данных PostgreSQL
+  db:
+    image: postgres:15
+    container_name: newlevel_db_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Приложение FastAPI
+  backend:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    container_name: newlevel_app_prod
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/newlevel
+      - PYTHONPATH=/app
+    ports:
+      - "8000:8000"
+    command: >
+      bash -c "
+        echo 'Waiting for database...' &&
+        sleep 5 &&
+        echo 'Starting application...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
+      "
+
+volumes:
+  postgres_data:

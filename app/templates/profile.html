@@ -1,177 +1,290 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Level - Профиль</title>
-  <style>
-    /* Общие стили */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Arial', sans-serif;
-    }
-    
-    body {
-      background: #CCCCFF;
-      line-height: 1.6;
-    }
-    
-    /* Шапка */
-    .header {
-      background: white;
-      padding: 15px 50px;
-      display: flex;
-      align-items: center;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      position: fixed;
-      width: 100%;
-      top: 0;
-      z-index: 1000;
-    }
-    
-    .logo {
-      color: #000099;
-      font-size: 28px;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-    
-    .user-panel {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-    
-    .user-panel .avatar {
-      width: 40px;
-      height: 40px;
-      background: #CC33FF;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: bold;
-      font-size: 1.2em;
-    }
-    
-    .user-panel .username {
-      color: #000099;
-      font-weight: 600;
-    }
-    
-    /* Контейнер для профиля */
-    .profile-container {
-      margin-top: 120px;
-      max-width: 400px;
-      background: #fff;
-      padding: 40px;
-      border: 2px solid #9400D3;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      margin-left: auto;
-      margin-right: auto;
-    }
-    
-    .profile-container h2 {
-      text-align: center;
-      color: #000099;
-      margin-bottom: 20px;
-    }
-    
-    .profile-form {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-    
-    .profile-form input {
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 16px;
-    }
-    
-    .profile-form button {
-      padding: 12px;
-      background: #9400D3;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    
-    .profile-form button:hover {
-      background: #000099;
-    }
-    
-    .profile-footer {
-      text-align: center;
-      margin-top: 20px;
-      font-size: 0.9em;
-      color: #666;
-    }
-    
-    .profile-footer a {
-      color: #9400D3;
-      text-decoration: none;
-      font-weight: 600;
-    }
-    
-    .profile-footer a:hover {
-      text-decoration: underline;
-    }
-  </style>
-</head>
-<body>
-  <!-- Шапка -->
-  <header class="header">
-    <div class="logo">New Level</div>
-    <div class="user-panel">
-      <div class="avatar">Б</div>
-      <div class="username">Баженов Иван</div>
-    </div>
-  </header>
+{% extends "layout.html" %}
+
+{% block title %}New Level - Профиль{% endblock %}
+
+{% block additional_styles %}
+.profile-container {
+  margin-top: 120px;
+  max-width: 600px;
+  background: #fff;
+  padding: 40px;
+  border: 2px solid var(--primary);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 80px;
+}
+
+.profile-container h2 {
+  text-align: center;
+  color: var(--secondary);
+  margin-bottom: 30px;
+  font-size: 28px;
+}
+
+.profile-stats {
+  background: #f9f9f9;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.profile-stats h3 {
+  color: var(--secondary);
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.level-progress {
+  margin-top: 25px;
+}
+
+.level-progress-title {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #555;
+}
+
+.level-bar {
+  height: 15px;
+  background: #eaeaea;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.level-fill {
+  height: 100%;
+  background: var(--gradient);
+  border-radius: 10px;
+  transition: width 0.3s;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #444;
+}
+
+.form-group input {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.3s;
+}
+
+.form-group input:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(148, 0, 211, 0.1);
+}
+
+.profile-form button {
+  padding: 12px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-top: 10px;
+}
+
+.profile-form button:hover {
+  background: var(--secondary);
+}
+
+.password-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.password-section h3 {
+  color: var(--secondary);
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+.form-footer {
+  text-align: center;
+  margin-top: 25px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.form-footer a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.form-footer a:hover {
+  color: var(--secondary);
+  text-decoration: underline;
+}
+
+.form-error-list {
+  margin-bottom: 15px;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  padding: 12px;
+  list-style-position: inside;
+}
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+  <h2>Профиль</h2>
   
-  <!-- Контейнер для профиля -->
-  <div class="profile-container">
-    <h2>Профиль</h2>
-    <form class="profile-form" action="#" method="post">
-      <input type="text" name="name" value="Баженов Иван" placeholder="Ваше имя" required>
-      <input type="email" name="email" value="ivan.bazhenov@example.com" placeholder="Ваш email" required>
-      <input type="password" id="password" name="password" placeholder="Новый пароль (если хотите сменить)">
-      <input type="password" id="confirm_password" name="confirm_password" placeholder="Подтвердите пароль">
-      <button type="submit">Сохранить изменения</button>
-    </form>
-    <div class="profile-footer">
-      <a href="index.html">Выйти из аккаунта</a>
+  {% if request.session.get('success_message') %}
+    <div class="alert alert-success">
+      {{ request.session.pop('success_message') }}
+    </div>
+  {% endif %}
+  
+  {% if errors %}
+    <ul class="form-error-list">
+      {% for error in errors %}
+        <li>{{ error }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  
+  <div class="profile-stats">
+    <h3>Ваша статистика</h3>
+    
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-value">{{ user.level }}</div>
+        <div class="stat-label">Уровень</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">{{ stats.total_points }}</div>
+        <div class="stat-label">Всего очков</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">{{ stats.total_games }}</div>
+        <div class="stat-label">Игр сыграно</div>
+      </div>
+    </div>
+    
+    <div class="level-progress">
+      <div class="level-progress-title">
+        <span>Прогресс до уровня {{ user.level + 1 }}</span>
+        <span>{{ user.experience }} / {{ exp_for_level_up }}</span>
+      </div>
+      <div class="level-bar">
+        <div class="level-fill" style="width: {{ progress_percent }}%;"></div>
+      </div>
     </div>
   </div>
+  
+  <form class="profile-form" method="post" action="/profile">
+    <div class="form-group">
+      <label for="name">Имя</label>
+      <input type="text" id="name" name="name" value="{{ user.name }}" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" value="{{ user.email }}" required>
+    </div>
+    
+    <div class="password-section">
+      <h3>Изменить пароль</h3>
+      <div class="form-group">
+        <label for="current_password">Текущий пароль</label>
+        <input type="password" id="current_password" name="current_password">
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Новый пароль</label>
+        <input type="password" id="password" name="password">
+      </div>
+      
+      <div class="form-group">
+        <label for="confirm_password">Подтвердите новый пароль</label>
+        <input type="password" id="confirm_password" name="confirm_password">
+      </div>
+    </div>
+    
+    <button type="submit">Сохранить изменения</button>
+    
+    <div class="form-footer">
+      <a href="/logout">Выйти из аккаунта</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
 
-  <!-- Скрипт для перенаправления и валидации -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const form = document.querySelector('.profile-form');
-      form.addEventListener('submit', function(e) {
+{% block scripts %}
+<script>
+  // Клиентская валидация формы
+  const form = document.querySelector('.profile-form');
+  const password = document.getElementById('password');
+  const confirmPassword = document.getElementById('confirm_password');
+  const currentPassword = document.getElementById('current_password');
+  
+  form.addEventListener('submit', function(e) {
+    // Если новый пароль введен, проверяем совпадение паролей
+    if (password.value) {
+      if (password.value !== confirmPassword.value) {
         e.preventDefault();
-        const pwd = document.getElementById('password').value;
-        const confirmPwd = document.getElementById('confirm_password').value;
-        // Если пользователь не вводит пароль, пропускаем проверку
-        if (pwd || confirmPwd) {
-          if (pwd !== confirmPwd) {
-            alert('Пароли не совпадают.');
-            return;
-          }
-        }
-        // Здесь можно добавить AJAX-запрос для сохранения данных
-        window.location.href = 'index-log.html';
-      });
-    });
-  </script>
-</body>
-</html>
+        alert('Новый пароль и подтверждение не совпадают!');
+        confirmPassword.focus();
+        return;
+      }
+      
+      // Проверяем, введен ли текущий пароль
+      if (!currentPassword.value) {
+        e.preventDefault();
+        alert('Для смены пароля необходимо ввести текущий пароль!');
+        currentPassword.focus();
+        return;
+      }
+    }
+  });
+</script>
+{% endblock %}

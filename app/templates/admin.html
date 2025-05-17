@@ -1,1332 +1,376 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Панель администратора | New Level</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet">
-  <style>
-    :root { --primary: #9400D3; --secondary: #000099; }
-    body { background-color: #f8f9fa; }
-    .sidebar { background: #fff; border-right: 1px solid #dee2e6; min-height: 100vh; }
-    .sidebar .nav-link.active { background-color: #f0e6ff; color: var(--primary); font-weight: bold; }
-    header { background-color: var(--primary); color: #fff; }
-    .btn-primary { background-color: var(--primary); border-color: var(--primary); }
-    .modal-header { background-color: var(--primary); color: #fff; }
-  </style>
-</head>
-<body>
-  <!-- Измененный хедер с информацией об администраторе -->
-  <header class="py-2 px-3 d-flex justify-content-between align-items-center">
-    <h4 class="m-0">New Level | Админ-панель</h4>
-    <div class="d-flex align-items-center">
-      <span class="me-2 text-white">Администратор: Баженов Иван Андреевич</span>
-      <a href="#" class="btn btn-sm btn-outline-light"><i class="bi bi-box-arrow-right"></i> Выйти</a>
+{% extends "base.html" %}
+{% block title %}Панель администратора{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4">Панель администратора</h1>
+<div class="alert alert-info">
+    Вы вошли как администратор: {{ admin_user.name }}
+</div>
+
+<!-- Навигация по вкладкам -->
+<ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" id="users-tab" data-toggle="tab" href="#users" role="tab" aria-controls="users" aria-selected="true">Пользователи</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="words-tab" data-toggle="tab" href="#words" role="tab" aria-controls="words" aria-selected="false">Слова</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="settings-tab" data-toggle="tab" href="#settings" role="tab" aria-controls="settings" aria-selected="false">Настройки</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="stats-tab" data-toggle="tab" href="#stats" role="tab" aria-controls="stats" aria-selected="false">Статистика</a>
+    </li>
+</ul>
+
+<!-- Содержимое вкладок -->
+<div class="tab-content" id="adminTabsContent">
+    <!-- Пользователи -->
+    <div class="tab-pane fade show active" id="users" role="tabpanel" aria-labelledby="users-tab">
+        <h3>Управление пользователями</h3>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Имя</th>
+                    <th>Email</th>
+                    <th>Роль</th>
+                    <th>Уровень</th>
+                    <th>Дата регистрации</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.role }}</td>
+                    <td>{{ user.level }}</td>
+                    <td>{{ user.created_at.strftime('%d.%m.%Y') }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="/admin/users/{{ user.id }}/edit" class="btn btn-sm btn-primary">Изменить</a>
+                            <form action="/admin/users/{{ user.id }}/delete" method="post" onsubmit="return confirm('Вы уверены, что хотите удалить пользователя?');" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Форма добавления пользователя -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Добавить нового пользователя</h5>
+            </div>
+            <div class="card-body">
+                <form action="/admin/users/create" method="post">
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">Имя:</label>
+                        <div class="col-sm-10">
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">Email:</label>
+                        <div class="col-sm-10">
+                            <input type="email" name="email" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">Пароль:</label>
+                        <div class="col-sm-10">
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">Роль:</label>
+                        <div class="col-sm-10">
+                            <select name="role" class="form-control">
+                                <option value="user">Пользователь</option>
+                                <option value="admin">Администратор</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">Добавить пользователя</button>
+                </form>
+            </div>
+        </div>
     </div>
-  </header>
-  <div class="d-flex">
-    <!-- Боковое меню -->
-    <nav class="sidebar p-3" style="width: 220px;">
-      <ul class="nav flex-column">
-        <li class="nav-item mb-2"><a class="nav-link" data-section="dashboardSection"><i class="bi bi-speedometer2 me-1"></i> Статистика</a></li>
-        <li class="nav-item mb-2"><a class="nav-link" data-section="wordsSection"><i class="bi bi-book me-1"></i> База слов</a></li>
-        <li class="nav-item mb-2"><a class="nav-link" data-section="gamesSection"><i class="bi bi-controller me-1"></i> Настройки игр</a></li>
-        <li class="nav-item mb-2"><a class="nav-link" data-section="usersSection"><i class="bi bi-people me-1"></i> Пользователи</a></li>
-      </ul>
-    </nav>
     
-    <!-- Основной контент -->
-    <main class="flex-fill p-3">
-      <!-- Статистика -->
-      <section id="dashboardSection">
-        <h3 class="mb-3">Статистика</h3>
+    <!-- Слова -->
+    <div class="tab-pane fade" id="words" role="tabpanel" aria-labelledby="words-tab">
+        <h3>Управление словами</h3>
+        
+        <!-- Фильтр слов -->
+        <div class="mb-3">
+            <form action="/admin/words" method="get" class="form-inline">
+                <div class="form-group mr-2">
+                    <select name="game_type" class="form-control">
+                        <option value="">Все типы</option>
+                        <option value="scramble">Анаграммы</option>
+                        <option value="matching">Сопоставление</option>
+                        <option value="typing">Написание слов</option>
+                    </select>
+                </div>
+                <div class="form-group mr-2">
+                    <select name="difficulty" class="form-control">
+                        <option value="">Все уровни</option>
+                        <option value="easy">Легкий</option>
+                        <option value="medium">Средний</option>
+                        <option value="hard">Сложный</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Фильтровать</button>
+            </form>
+        </div>
+        
+        <!-- Таблица слов -->
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Слово</th>
+                    <th>Перевод/Описание</th>
+                    <th>Тип игры</th>
+                    <th>Сложность</th>
+                    <th>Показано</th>
+                    <th>Правильно</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for word in words %}
+                <tr>
+                    <td>{{ word.id }}</td>
+                    <td>{{ word.text }}</td>
+                    <td>
+                        {% if word.translation %}
+                            {{ word.translation }}
+                        {% elif word.description %}
+                            {{ word.description }}
+                        {% elif word.scrambled %}
+                            {{ word.scrambled }}
+                        {% endif %}
+                    </td>
+                    <td>{{ word.game_type }}</td>
+                    <td>{{ word.difficulty }}</td>
+                    <td>{{ word.times_shown }}</td>
+                    <td>{{ word.times_correct }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="/admin/words/{{ word.id }}/edit" class="btn btn-sm btn-primary">Изменить</a>
+                            <form action="/admin/words/{{ word.id }}/delete" method="post" onsubmit="return confirm('Вы уверены, что хотите удалить слово?');" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Форма добавления слова -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Добавить новое слово</h5>
+            </div>
+            <div class="card-body">
+                <form action="/admin/words/create" method="post">
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">Слово:</label>
+                        <div class="col-sm-10">
+                            <input type="text" name="text" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">Тип игры:</label>
+                        <div class="col-sm-10">
+                            <select name="game_type" class="form-control" id="gameTypeSelect" required>
+                                <option value="scramble">Анаграммы</option>
+                                <option value="matching">Сопоставление</option>
+                                <option value="typing">Написание слов</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Динамические поля в зависимости от типа игры -->
+                    <div id="scrambleFields" class="dynamic-fields">
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label">Перемешанное слово:</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="scrambled" class="form-control">
+                                <small class="form-text text-muted">Оставьте пустым для автоматического создания</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="matchingFields" class="dynamic-fields" style="display:none;">
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label">Перевод:</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="translation" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="typingFields" class="dynamic-fields" style="display:none;">
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label">Описание:</label>
+                            <div class="col-sm-10">
+                                <textarea name="description" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">Сложность:</label>
+                        <div class="col-sm-10">
+                            <select name="difficulty" class="form-control" required>
+                                <option value="easy">Легкий</option>
+                                <option value="medium">Средний</option>
+                                <option value="hard">Сложный</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">Добавить слово</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Настройки -->
+    <div class="tab-pane fade" id="settings" role="tabpanel" aria-labelledby="settings-tab">
+        <h3>Настройки приложения</h3>
+        
+        <div class="card">
+            <div class="card-body">
+                <form action="/admin/settings/update" method="post">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Параметр</th>
+                                <th>Значение</th>
+                                <th>Описание</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for setting in settings %}
+                            <tr>
+                                <td>{{ setting.key }}</td>
+                                <td>
+                                    <input type="text" name="setting_{{ setting.key }}" value="{{ setting.value }}" class="form-control">
+                                </td>
+                                <td>
+                                    {% if setting.key == "points_per_answer" %}
+                                        Очки за правильный ответ
+                                    {% elif setting.key == "points_for_level_up" %}
+                                        Очки для повышения уровня
+                                    {% elif setting.key == "streak_bonus" %}
+                                        Бонус за серию правильных ответов
+                                    {% elif setting.key == "max_level" %}
+                                        Максимальный уровень
+                                    {% elif setting.key == "scramble_time_limit" %}
+                                        Лимит времени для анаграмм (сек)
+                                    {% elif setting.key == "matching_time_limit" %}
+                                        Лимит времени для сопоставления (сек)
+                                    {% elif setting.key == "typing_time_limit" %}
+                                        Лимит времени для написания слов (сек)
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    
+                    <div class="form-row align-items-center mt-3">
+                        <div class="col-4">
+                            <input type="text" name="new_key" class="form-control" placeholder="Новый параметр">
+                        </div>
+                        <div class="col-4">
+                            <input type="text" name="new_value" class="form-control" placeholder="Значение">
+                        </div>
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-primary">Сохранить все настройки</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Статистика -->
+    <div class="tab-pane fade" id="stats" role="tabpanel" aria-labelledby="stats-tab">
+        <h3>Статистика приложения</h3>
+        
         <div class="row">
-          <div class="col-md-3 mb-3">
-            <div class="card border-0 shadow-sm">
-              <div class="card-body">
-                <h5 class="card-title">Пользователи</h5>
-                <p class="card-text fs-3" id="statUsers">-</p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3 mb-3">
-            <div class="card border-0 shadow-sm">
-              <div class="card-body">
-                <h5 class="card-title">Администраторы</h5>
-                <p class="card-text fs-3" id="statAdmins">-</p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3 mb-3">
-            <div class="card border-0 shadow-sm">
-              <div class="card-body">
-                <h5 class="card-title">Всего слов</h5>
-                <p class="card-text fs-3" id="statWords">-</p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3 mb-3">
-            <div class="card border-0 shadow-sm">
-              <div class="card-body">
-                <h5 class="card-title">Активных игр</h5>
-                <p class="card-text fs-3">3</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card border-0 shadow-sm mt-3">
-          <div class="card-body">
-            <h5 class="card-title">Статистика по базе слов</h5>
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th>Игра</th>
-                  <th>Всего слов</th>
-                  <th>Легкий</th>
-                  <th>Средний</th>
-                  <th>Сложный</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Анаграммы</td>
-                  <td id="statScrambleWords">-</td>
-                  <td id="statScrambleEasy">-</td>
-                  <td id="statScrambleMedium">-</td>
-                  <td id="statScrambleHard">-</td>
-                </tr>
-                <tr>
-                  <td>Сопоставление</td>
-                  <td id="statMatchingWords">-</td>
-                  <td id="statMatchingEasy">-</td>
-                  <td id="statMatchingMedium">-</td>
-                  <td id="statMatchingHard">-</td>
-                </tr>
-                <tr>
-                  <td>Написание слов</td>
-                  <td id="statTypingWords">-</td>
-                  <td id="statTypingEasy">-</td>
-                  <td id="statTypingMedium">-</td>
-                  <td id="statTypingHard">-</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-      
-      <!-- База слов -->
-      <section id="wordsSection" class="d-none">
-        <h3 class="mb-3">База слов</h3>
-        
-        <ul class="nav nav-tabs mb-3" id="wordsTabs">
-          <li class="nav-item">
-            <a class="nav-link active" id="scramble-tab" data-bs-toggle="tab" href="#scramble">Анаграммы</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" id="matching-tab" data-bs-toggle="tab" href="#matching">Сопоставление</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" id="typing-tab" data-bs-toggle="tab" href="#typing">Написание слов</a>
-          </li>
-        </ul>
-        
-        <div class="tab-content">
-          <!-- Анаграммы -->
-          <div class="tab-pane fade show active" id="scramble">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScrambleModal">
-                <i class="bi bi-plus-lg"></i> Добавить слово
-              </button>
-              <div class="d-flex">
-                <input type="text" id="scrambleSearchInput" class="form-control me-2" placeholder="Поиск слова">
-                <select id="scrambleDifficulty" class="form-select">
-                  <option value="">Все уровни</option>
-                  <option>Легкий</option>
-                  <option>Средний</option>
-                  <option>Сложный</option>
-                </select>
-              </div>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-striped table-hover">
-                <thead><tr><th>Слово</th><th>Перемешанное слово</th><th>Сложность</th><th>Действия</th></tr></thead>
-                <tbody id="scrambleTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-          
-          <!-- Сопоставление -->
-          <div class="tab-pane fade" id="matching">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMatchingModal">
-                <i class="bi bi-plus-lg"></i> Добавить пару слов
-              </button>
-              <div class="d-flex">
-                <input type="text" id="matchingSearchInput" class="form-control me-2" placeholder="Поиск слова">
-                <select id="matchingDifficulty" class="form-select">
-                  <option value="">Все уровни</option>
-                  <option>Легкий</option>
-                  <option>Средний</option>
-                  <option>Сложный</option>
-                </select>
-              </div>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-striped table-hover">
-                <thead><tr><th>Английское слово</th><th>Русское слово</th><th>Сложность</th><th>Действия</th></tr></thead>
-                <tbody id="matchingTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-          
-          <!-- Написание слов -->
-          <div class="tab-pane fade" id="typing">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTypingModal">
-                <i class="bi bi-plus-lg"></i> Добавить задание
-              </button>
-              <div class="d-flex">
-                <input type="text" id="typingSearchInput" class="form-control me-2" placeholder="Поиск слова">
-                <select id="typingDifficulty" class="form-select">
-                  <option value="">Все уровни</option>
-                  <option>Легкий</option>
-                  <option>Средний</option>
-                  <option>Сложный</option>
-                </select>
-              </div>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-striped table-hover">
-                <thead><tr><th>Правильный ответ</th><th>Описание</th><th>Сложность</th><th>Действия</th></tr></thead>
-                <tbody id="typingTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        
-        <div class="d-flex justify-content-between align-items-center mt-3">
-          <div>
-            <label>Показать <select id="pageSize" class="form-select d-inline-block w-auto">
-              <option value="10">10</option><option value="20">20</option><option value="50">50</option>
-            </select> элементов</label>
-          </div>
-          <ul id="pagination" class="pagination mb-0"></ul>
-        </div>
-      </section>
-      
-      <!-- Настройки игр -->
-      <section id="gamesSection" class="d-none">
-        <h3 class="mb-3">Настройки игр</h3>
-        
-        <div class="card border-0 shadow-sm mb-3">
-          <div class="card-body">
-            <h5 class="card-title">Общие настройки</h5>
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Очки за правильный ответ</label>
-                <input type="number" id="pointsPerAnswer" class="form-control" value="10">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Очки для повышения уровня</label>
-                <input type="number" id="pointsForLevelUp" class="form-control" value="100">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Бонус за серию правильных ответов</label>
-                <input type="number" id="streakBonus" class="form-control" value="5">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Максимальный уровень</label>
-                <input type="number" id="maxLevel" class="form-control" value="10">
-              </div>
-              <div class="col-12 text-end">
-                <button class="btn btn-primary" id="saveGameSettings">Сохранить настройки</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="row">
-          <div class="col-md-4 mb-3">
-            <div class="card border-0 shadow-sm h-100">
-              <div class="card-body">
-                <h5 class="card-title">Анаграммы</h5>
-                <div class="form-check form-switch mb-3">
-                  <input class="form-check-input" type="checkbox" id="scrambleEnabled" checked>
-                  <label class="form-check-label">Игра активна</label>
+            <div class="col-md-4">
+                <div class="card text-white bg-primary mb-3">
+                    <div class="card-header">Всего пользователей</div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ users|length }}</h5>
+                    </div>
                 </div>
-                <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#gameSettingsModal" data-game="scramble">
-                  Настройки игры
-                </button>
-              </div>
             </div>
-          </div>
-          
-          <div class="col-md-4 mb-3">
-            <div class="card border-0 shadow-sm h-100">
-              <div class="card-body">
-                <h5 class="card-title">Сопоставление</h5>
-                <div class="form-check form-switch mb-3">
-                  <input class="form-check-input" type="checkbox" id="matchingEnabled" checked>
-                  <label class="form-check-label">Игра активна</label>
+            <div class="col-md-4">
+                <div class="card text-white bg-success mb-3">
+                    <div class="card-header">Всего слов</div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ words|length }}</h5>
+                    </div>
                 </div>
-                <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#gameSettingsModal" data-game="matching">
-                  Настройки игры
-                </button>
-              </div>
             </div>
-          </div>
-          
-          <div class="col-md-4 mb-3">
-            <div class="card border-0 shadow-sm h-100">
-              <div class="card-body">
-                <h5 class="card-title">Написание слов</h5>
-                <div class="form-check form-switch mb-3">
-                  <input class="form-check-input" type="checkbox" id="typingEnabled" checked>
-                  <label class="form-check-label">Игра активна</label>
+            <div class="col-md-4">
+                <div class="card text-white bg-info mb-3">
+                    <div class="card-header">Игр сыграно</div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ games_count }}</h5>
+                    </div>
                 </div>
-                <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#gameSettingsModal" data-game="typing">
-                  Настройки игры
-                </button>
-              </div>
             </div>
-          </div>
         </div>
-      </section>
-      
-      <!-- Пользователи -->
-      <section id="usersSection" class="d-none">
-        <h3 class="mb-3">Пользователи</h3>
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-            <i class="bi bi-person-plus"></i> Добавить пользователя
-          </button>
-          <input type="text" id="userSearch" class="form-control w-25" placeholder="Поиск пользователя">
-        </div>
-        <div class="table-responsive">
-          <table class="table table-striped table-hover">
-            <thead><tr><th>ID</th><th>Имя</th><th>Email</th><th>Роль</th><th>Действия</th></tr></thead>
-            <tbody id="usersBody"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <!-- Модальные окна для базы слов -->
-  <!-- Анаграммы -->
-  <div class="modal fade" id="addScrambleModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Добавить слово для анаграммы</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="form-add-scramble">
-            <div class="mb-3">
-              <label class="form-label doom">Слово</label>
-              <input type="text" id="add-scramble-word" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Перемешанное слово (оставьте пустым для автогенерации)</label>
-              <input type="text" id="add-scramble-scrambled" class="form-control">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Сложность</label>
-              <select id="add-scramble-difficulty" class="form-select">
-                <option>Легкий</option><option>Средний</option><option>Сложный</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-primary">Сохранить</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="modal fade" id="editScrambleModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Редактировать слово</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="form-edit-scramble">
-            <input type="hidden" id="edit-scramble-index">
-            <div class="mb-3">
-              <label class="form-label">Слово</label>
-              <input type="text" id="edit-scramble-word" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Перемешанное слово</label>
-              <input type="text" id="edit-scramble-scrambled" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Сложность</label>
-              <select id="edit-scramble-difficulty" class="form-select">
-                <option>Легкий</option><option>Средний</option><option>Сложный</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-primary">Обновить</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Сопоставление -->
-  <div class="modal fade" id="addMatchingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Добавить пару для сопоставления</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="form-add-matching">
-            <div class="mb-3">
-              <label class="form-label">Английское слово</label>
-              <input type="text" id="add-matching-english" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Русское слово</label>
-              <input type="text" id="add-matching-russian" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Сложность</label>
-              <select id="add-matching-difficulty" class="form-select">
-                <option>Легкий</option><option>Средний</option><option>Сложный</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-primary">Сохранить</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="modal fade" id="editMatchingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Редактировать пару</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="form-edit-matching">
-            <input type="hidden" id="edit-matching-index">
-            <div class="mb-3">
-              <label class="form-label">Английское слово</label>
-              <input type="text" id="edit-matching-english" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Русское слово</label>
-              <input type="text" id="edit-matching-russian" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Сложность</label>
-              <select id="edit-matching-difficulty" class="form-select">
-                <option>Легкий</option><option>Средний</option><option>Сложный</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-primary">Обновить</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Написание слов -->
-  <div class="modal fade" id="addTypingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Добавить задание на написание</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="form-add-typing">
-            <div class="mb-3">
-              <label class="form-label">Правильный ответ</label>
-              <input type="text" id="add-typing-answer" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Описание</label>
-              <textarea id="add-typing-prompt" class="form-control" rows="3" required></textarea>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Сложность</label>
-              <select id="add-typing-difficulty" class="form-select">
-                <option>Легкий</option><option>Средний</option><option>Сложный</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-primary">Сохранить</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="modal fade" id="editTypingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Редактировать задание</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="form-edit-typing">
-            <input type="hidden" id="edit-typing-index">
-            <div class="mb-3">
-              <label class="form-label">Правильный ответ</label>
-              <input type="text" id="edit-typing-answer" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Описание</label>
-              <textarea id="edit-typing-prompt" class="form-control" rows="3" required></textarea>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Сложность</label>
-              <select id="edit-typing-difficulty" class="form-select">
-                <option>Легкий</option><option>Средний</option><option>Сложный</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-primary">Обновить</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Настройки игры -->
-  <div class="modal fade" id="gameSettingsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Настройки игры</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <input type="hidden" id="settings-game-type">
-          <div class="mb-3">
-            <label class="form-label">Название игры</label>
-            <input type="text" id="settings-game-title" class="form-control">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Описание</label>
-            <textarea id="settings-game-description" class="form-control" rows="3"></textarea>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Очки за правильный ответ</label>
-            <input type="number" id="settings-points-per-answer" class="form-control">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Время на ответ (секунд, 0 - без ограничения)</label>
-            <input type="number" id="settings-time-limit" class="form-control">
-          </div>
-          <button type="button" class="btn btn-primary" id="saveSettingsBtn">Сохранить</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Модалки пользователей -->
-  <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Добавить пользователя</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="form-add-user">
-            <div class="mb-3">
-              <label class="form-label">Имя</label>
-              <input type="text" id="user-name" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Email</label>
-              <input type="email" id="user-email" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Роль</label>
-              <select id="user-role" class="form-select">
-                <option>Admin</option><option>User</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Пароль</label>
-              <input type="password" id="user-password" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Подтверждение пароля</label>
-              <input type="password" id="user-password-confirm" class="form-control" required>
-              <div class="invalid-feedback" id="password-error">Пароли не совпадают</div>
-            </div>
-            <button type="submit" class="btn btn-primary">Сохранить</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Редактировать пользователя</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="form-edit-user">
-            <input type="hidden" id="edit-user-id">
-            <div class="mb-3">
-              <label class="form-label">Имя</label>
-              <input type="text" id="edit-user-name" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Email</label>
-              <input type="email" id="edit-user-email" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Роль</label>
-              <select id="edit-user-role" class="form-select">
-                <option>Admin</option><option>User</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Новый пароль (оставьте пустым, чтобы не менять)</label>
-              <input type="password" id="edit-user-password" class="form-control">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Подтверждение пароля</label>
-              <input type="password" id="edit-user-password-confirm" class="form-control">
-              <div class="invalid-feedback" id="edit-password-error">Пароли не совпадают</div>
-            </div>
-            <button type="submit" class="btn btn-primary">Обновить</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Скрипты -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    // Ключи для localStorage
-    const keys = {
-      scramble: 'game_scramble_words',
-      matching: 'game_matching_words',
-      typing: 'game_typing_words',
-      users: 'game_users',
-      settings: 'game_settings',
-      section: 'admin_section'
-    };
-    
-    // Данные
-    let data = {
-      scramble: JSON.parse(localStorage.getItem(keys.scramble)) || [
-        {word: 'apple', scrambled: 'PEAPL', difficulty: 'Легкий'},
-        {word: 'house', scrambled: 'OEHSU', difficulty: 'Легкий'},
-        {word: 'water', scrambled: 'WTERA', difficulty: 'Средний'},
-        {word: 'book', scrambled: 'KOBO', difficulty: 'Легкий'}
-      ],
-      matching: JSON.parse(localStorage.getItem(keys.matching)) || [
-        {english: 'apple', russian: 'яблоко', difficulty: 'Легкий'},
-        {english: 'book', russian: 'книга', difficulty: 'Легкий'},
-        {english: 'house', russian: 'дом', difficulty: 'Легкий'},
-        {english: 'dog', russian: 'собака', difficulty: 'Легкий'},
-        {english: 'cat', russian: 'кошка', difficulty: 'Легкий'},
-        {english: 'bird', russian: 'птица', difficulty: 'Средний'}
-      ],
-      typing: JSON.parse(localStorage.getItem(keys.typing)) || [
-        {answer: 'cat', prompt: 'Напишите английское слово, которое означает: "Любимое домашнее животное, которое мяукает"', difficulty: 'Легкий'},
-        {answer: 'house', prompt: 'Напишите английское слово, которое означает: "Место, где живут люди, с крышей и стенами"', difficulty: 'Легкий'},
-        {answer: 'water', prompt: 'Напишите английское слово, которое означает: "Жидкость, которую мы пьем каждый день"', difficulty: 'Средний'},
-        {answer: 'breakfast', prompt: 'Напишите английское слово, которое означает: "Прием пищи утром"', difficulty: 'Средний'}
-      ],
-      users: JSON.parse(localStorage.getItem(keys.users)) || [
-        {id: 1, name: 'Иван Иванов', email: 'ivan@example.com', role: 'Admin', password: 'admin123'},
-        {id: 2, name: 'Мария Петрова', email: 'maria@example.com', role: 'User', password: 'user123'},
-        {id: 3, name: 'Алексей Сидоров', email: 'alex@example.com', role: 'User', password: 'user456'}
-      ],
-      settings: JSON.parse(localStorage.getItem(keys.settings)) || {
-        pointsPerAnswer: 10,
-        pointsForLevelUp: 100,
-        streakBonus: 5,
-        maxLevel: 10,
-        games: {
-          scramble: {title: 'Анаграммы', description: 'Расшифруйте английское слово', pointsPerAnswer: 10, timeLimit: 0},
-          matching: {title: 'Сопоставление', description: 'Соедините пары слов', pointsPerAnswer: 10, timeLimit: 0},
-          typing: {title: 'Написание слов', description: 'Напишите слово по описанию', pointsPerAnswer: 10, timeLimit: 0}
-        }
-      }
-    };
-    
-    let currentPage = 1;
-    let currentTab = 'scramble';
-
-    // Сохранение данных
-    function saveData() {
-      Object.keys(data).forEach(key => {
-        localStorage.setItem(keys[key], JSON.stringify(data[key]));
-      });
-    }
-
-    // Навигация
-    document.querySelectorAll('.sidebar .nav-link').forEach(link => {
-      link.addEventListener('click', () => {
-        document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
-        link.classList.add('active');
-        const section = link.dataset.section;
-        localStorage.setItem(keys.section, section);
-        showSection(section);
-      });
-    });
-
-    function showSection(section) {
-      document.querySelectorAll('main section').forEach(s => s.classList.add('d-none'));
-      document.getElementById(section).classList.remove('d-none');
-      
-      const handlers = {
-        dashboardSection: renderStats,
-        wordsSection: renderWords,
-        gamesSection: renderGames,
-        usersSection: renderUsers
-      };
-      
-      if (handlers[section]) handlers[section]();
-    }
-
-    // Статистика
-    function renderStats() {
-      // Подсчёт пользователей
-      document.getElementById('statUsers').textContent = data.users.filter(u => u.role === 'User').length;
-      document.getElementById('statAdmins').textContent = data.users.filter(u => u.role === 'Admin').length;
-      document.getElementById('statWords').textContent = data.scramble.length + data.matching.length + data.typing.length;
-      
-      // Статистика по словам
-      function countByDifficulty(arr) {
-        return {
-          total: arr.length,
-          easy: arr.filter(w => w.difficulty === 'Легкий').length,
-          medium: arr.filter(w => w.difficulty === 'Средний').length,
-          hard: arr.filter(w => w.difficulty === 'Сложный').length
-        };
-      }
-      
-      const scrambleStats = countByDifficulty(data.scramble);
-      document.getElementById('statScrambleWords').textContent = scrambleStats.total;
-      document.getElementById('statScrambleEasy').textContent = scrambleStats.easy;
-      document.getElementById('statScrambleMedium').textContent = scrambleStats.medium;
-      document.getElementById('statScrambleHard').textContent = scrambleStats.hard;
-      
-      const matchingStats = countByDifficulty(data.matching);
-      document.getElementById('statMatchingWords').textContent = matchingStats.total;
-      document.getElementById('statMatchingEasy').textContent = matchingStats.easy;
-      document.getElementById('statMatchingMedium').textContent = matchingStats.medium;
-      document.getElementById('statMatchingHard').textContent = matchingStats.hard;
-      
-      const typingStats = countByDifficulty(data.typing);
-      document.getElementById('statTypingWords').textContent = typingStats.total;
-      document.getElementById('statTypingEasy').textContent = typingStats.easy;
-      document.getElementById('statTypingMedium').textContent = typingStats.medium;
-      document.getElementById('statTypingHard').textContent = typingStats.hard;
-    }
-
-    // Вкладки с играми
-    document.querySelectorAll('#wordsTabs .nav-link').forEach(tab => {
-      tab.addEventListener('click', () => {
-        currentTab = tab.getAttribute('href').substring(1);
-        currentPage = 1;
-        renderWords();
-      });
-    });
-
-    // Рендеринг слов
-    function renderWords() {
-      const renderFunctions = {
-        scramble: renderScrambleWords,
-        matching: renderMatchingWords,
-        typing: renderTypingWords
-      };
-      
-      if (renderFunctions[currentTab]) renderFunctions[currentTab]();
-    }
-
-    // Общая функция для рендеринга таблицы
-    function renderTable(options) {
-      const { items, tableId, searchId, difficultyId, renderer } = options;
-      const tbody = document.getElementById(tableId);
-      tbody.innerHTML = '';
-      
-      const term = document.getElementById(searchId)?.value?.toLowerCase() || '';
-      const difficulty = document.getElementById(difficultyId)?.value || '';
-      
-      const filtered = items.filter(item => {
-        const searchMatch = Object.values(item).some(val => 
-          typeof val === 'string' && val.toLowerCase().includes(term)
-        );
-        const difficultyMatch = !difficulty || item.difficulty === difficulty;
-        return searchMatch && difficultyMatch;
-      });
-      
-      const pageSize = parseInt(document.getElementById('pageSize')?.value || 10);
-      const total = Math.ceil(filtered.length / pageSize) || 1;
-      currentPage = Math.min(currentPage, total);
-      const start = (currentPage - 1) * pageSize;
-      
-      filtered.slice(start, start + pageSize).forEach((item, i) => {
-        const idx = items.indexOf(item);
-        const tr = document.createElement('tr');
-        tr.innerHTML = renderer(item, idx);
-        tbody.appendChild(tr);
-      });
-      
-      renderPagination(total);
-    }
-
-    // Рендеринг слов для анаграмм
-    function renderScrambleWords() {
-      renderTable({
-        items: data.scramble,
-        tableId: 'scrambleTableBody',
-        searchId: 'scrambleSearchInput',
-        difficultyId: 'scrambleDifficulty',
-        renderer: (item, idx) => `
-          <td>${item.word}</td>
-          <td>${item.scrambled}</td>
-          <td>${item.difficulty}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-primary me-1" onclick="editScrambleWord(${idx})">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteScrambleWord(${idx})">
-              <i class="bi bi-trash"></i>
-            </button>
-          </td>
-        `
-      });
-    }
-
-    // Рендеринг слов для сопоставления
-    function renderMatchingWords() {
-      renderTable({
-        items: data.matching,
-        tableId: 'matchingTableBody',
-        searchId: 'matchingSearchInput',
-        difficultyId: 'matchingDifficulty',
-        renderer: (item, idx) => `
-          <td>${item.english}</td>
-          <td>${item.russian}</td>
-          <td>${item.difficulty}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-primary me-1" onclick="editMatchingWord(${idx})">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteMatchingWord(${idx})">
-              <i class="bi bi-trash"></i>
-            </button>
-          </td>
-        `
-      });
-    }
-
-    // Рендеринг заданий для написания слов
-    function renderTypingWords() {
-      renderTable({
-        items: data.typing,
-        tableId: 'typingTableBody',
-        searchId: 'typingSearchInput',
-        difficultyId: 'typingDifficulty',
-        renderer: (item, idx) => `
-          <td>${item.answer}</td>
-          <td>${item.prompt.length > 50 ? item.prompt.substring(0, 50) + '...' : item.prompt}</td>
-          <td>${item.difficulty}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-primary me-1" onclick="editTypingWord(${idx})">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteTypingWord(${idx})">
-              <i class="bi bi-trash"></i>
-            </button>
-          </td>
-        `
-      });
-    }
-
-    // Страницы пагинации
-    function renderPagination(total) {
-      const pag = document.getElementById('pagination');
-      pag.innerHTML = '';
-      
-      if (total <= 1) return;
-      
-      for (let i = 1; i <= total; i++) {
-        const li = document.createElement('li');
-        li.className = 'page-item' + (i === currentPage ? ' active' : '');
-        li.innerHTML = `<a class="page-link" href="#" onclick="goPage(${i})">${i}</a>`;
-        pag.appendChild(li);
-      }
-    }
-    
-    function goPage(i) {
-      currentPage = i;
-      renderWords();
-    }
-
-    // Функции для перемешивания слов
-    function shuffleWord(word) {
-      const arr = word.split('');
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr.join('');
-    }
-
-    // Функции CRUD для анаграмм
-    document.getElementById('form-add-scramble')?.addEventListener('submit', e => {
-      e.preventDefault();
-      
-      const word = document.getElementById('add-scramble-word').value.trim();
-      let scrambled = document.getElementById('add-scramble-scrambled').value.trim();
-      
-      if (!scrambled) scrambled = shuffleWord(word).toUpperCase();
-      
-      data.scramble.push({
-        word: word,
-        scrambled: scrambled,
-        difficulty: document.getElementById('add-scramble-difficulty').value
-      });
-      
-      saveData();
-      bootstrap.Modal.getInstance(document.getElementById('addScrambleModal')).hide();
-      e.target.reset();
-      renderWords();
-      renderStats();
-    });
-    
-    function editScrambleWord(idx) {
-      const word = data.scramble[idx];
-      
-      document.getElementById('edit-scramble-index').value = idx;
-      document.getElementById('edit-scramble-word').value = word.word;
-      document.getElementById('edit-scramble-scrambled').value = word.scrambled;
-      document.getElementById('edit-scramble-difficulty').value = word.difficulty;
-      
-      new bootstrap.Modal(document.getElementById('editScrambleModal')).show();
-    }
-    
-    document.getElementById('form-edit-scramble')?.addEventListener('submit', e => {
-      e.preventDefault();
-      
-      const idx = document.getElementById('edit-scramble-index').value;
-      
-      data.scramble[idx] = {
-        word: document.getElementById('edit-scramble-word').value.trim(),
-        scrambled: document.getElementById('edit-scramble-scrambled').value.trim(),
-        difficulty: document.getElementById('edit-scramble-difficulty').value
-      };
-      
-      saveData();
-      bootstrap.Modal.getInstance(document.getElementById('editScrambleModal')).hide();
-      renderWords();
-      renderStats();
-    });
-    
-    function deleteScrambleWord(idx) {
-      if (confirm('Удалить слово?')) {
-        data.scramble.splice(idx, 1);
-        saveData();
-        renderWords();
-        renderStats();
-      }
-    }
-
-    // Функции CRUD для сопоставления
-    document.getElementById('form-add-matching')?.addEventListener('submit', e => {
-      e.preventDefault();
-      
-      data.matching.push({
-        english: document.getElementById('add-matching-english').value.trim(),
-        russian: document.getElementById('add-matching-russian').value.trim(),
-        difficulty: document.getElementById('add-matching-difficulty').value
-      });
-      
-      saveData();
-      bootstrap.Modal.getInstance(document.getElementById('addMatchingModal')).hide();
-      e.target.reset();
-      renderWords();
-      renderStats();
-    });
-    
-    function editMatchingWord(idx) {
-      const word = data.matching[idx];
-      
-      document.getElementById('edit-matching-index').value = idx;
-      document.getElementById('edit-matching-english').value = word.english;
-      document.getElementById('edit-matching-russian').value = word.russian;
-      document.getElementById('edit-matching-difficulty').value = word.difficulty;
-      
-      new bootstrap.Modal(document.getElementById('editMatchingModal')).show();
-    }
-    
-    document.getElementById('form-edit-matching')?.addEventListener('submit', e => {
-      e.preventDefault();
-      
-      const idx = document.getElementById('edit-matching-index').value;
-      
-      data.matching[idx] = {
-        english: document.getElementById('edit-matching-english').value.trim(),
-        russian: document.getElementById('edit-matching-russian').value.trim(),
-        difficulty: document.getElementById('edit-matching-difficulty').value
-      };
-      
-      saveData();
-      bootstrap.Modal.getInstance(document.getElementById('editMatchingModal')).hide();
-      renderWords();
-      renderStats();
-    });
-    
-    function deleteMatchingWord(idx) {
-      if (confirm('Удалить пару слов?')) {
-        data.matching.splice(idx, 1);
-        saveData();
-        renderWords();
-        renderStats();
-      }
-    }
-
-    // Функции CRUD для написания слов
-    document.getElementById('form-add-typing')?.addEventListener('submit', e => {
-      e.preventDefault();
-      
-      data.typing.push({
-        answer: document.getElementById('add-typing-answer').value.trim(),
-        prompt: document.getElementById('add-typing-prompt').value.trim(),
-        difficulty: document.getElementById('add-typing-difficulty').value
-      });
-      
-      saveData();
-      bootstrap.Modal.getInstance(document.getElementById('addTypingModal')).hide();
-      e.target.reset();
-      renderWords();
-      renderStats();
-    });
-    
-    function editTypingWord(idx) {
-      const word = data.typing[idx];
-      
-      document.getElementById('edit-typing-index').value = idx;
-      document.getElementById('edit-typing-answer').value = word.answer;
-      document.getElementById('edit-typing-prompt').value = word.prompt;
-      document.getElementById('edit-typing-difficulty').value = word.difficulty;
-      
-      new bootstrap.Modal(document.getElementById('editTypingModal')).show();
-    }
-    
-    document.getElementById('form-edit-typing')?.addEventListener('submit', e => {
-      e.preventDefault();
-      
-      const idx = document.getElementById('edit-typing-index').value;
-      
-      data.typing[idx] = {
-        answer: document.getElementById('edit-typing-answer').value.trim(),
-        prompt: document.getElementById('edit-typing-prompt').value.trim(),
-        difficulty: document.getElementById('edit-typing-difficulty').value
-      };
-      
-      saveData();
-      bootstrap.Modal.getInstance(document.getElementById('editTypingModal')).hide();
-      renderWords();
-      renderStats();
-    });
-    
-    function deleteTypingWord(idx) {
-      if (confirm('Удалить задание?')) {
-        data.typing.splice(idx, 1);
-        saveData();
-        renderWords();
-        renderStats();
-      }
-    }
-
-    // Настройки игр
-    function renderGames() {
-      document.getElementById('pointsPerAnswer').value = data.settings.pointsPerAnswer;
-      document.getElementById('pointsForLevelUp').value = data.settings.pointsForLevelUp;
-      document.getElementById('streakBonus').value = data.settings.streakBonus;
-      document.getElementById('maxLevel').value = data.settings.maxLevel;
-      
-      document.getElementById('scrambleEnabled').checked = true;
-      document.getElementById('matchingEnabled').checked = true;
-      document.getElementById('typingEnabled').checked = true;
-    }
-    
-    // Обработка модального окна настроек игры
-    document.querySelectorAll('[data-bs-target="#gameSettingsModal"]').forEach(button => {
-      button.addEventListener('click', () => {
-        const gameType = button.getAttribute('data-game');
-        const game = data.settings.games[gameType];
         
-        document.getElementById('settings-game-type').value = gameType;
-        document.getElementById('settings-game-title').value = game.title;
-        document.getElementById('settings-game-description').value = game.description;
-        document.getElementById('settings-points-per-answer').value = game.pointsPerAnswer;
-        document.getElementById('settings-time-limit').value = game.timeLimit;
-      });
-    });
-    
-    document.getElementById('saveSettingsBtn')?.addEventListener('click', () => {
-      const gameType = document.getElementById('settings-game-type').value;
-      
-      data.settings.games[gameType] = {
-        title: document.getElementById('settings-game-title').value,
-        description: document.getElementById('settings-game-description').value,
-        pointsPerAnswer: parseInt(document.getElementById('settings-points-per-answer').value),
-        timeLimit: parseInt(document.getElementById('settings-time-limit').value)
-      };
-      
-      saveData();
-      bootstrap.Modal.getInstance(document.getElementById('gameSettingsModal')).hide();
-      alert('Настройки сохранены');
-    });
-    
-    document.getElementById('saveGameSettings')?.addEventListener('click', () => {
-      data.settings.pointsPerAnswer = parseInt(document.getElementById('pointsPerAnswer').value);
-      data.settings.pointsForLevelUp = parseInt(document.getElementById('pointsForLevelUp').value);
-      data.settings.streakBonus = parseInt(document.getElementById('streakBonus').value);
-      data.settings.maxLevel = parseInt(document.getElementById('maxLevel').value);
-      
-      saveData();
-      alert('Общие настройки сохранены');
-    });
-
-    // Функции для пользователей
-    function renderUsers() {
-      const tbody = document.getElementById('usersBody');
-      tbody.innerHTML = '';
-      
-      const term = document.getElementById('userSearch')?.value?.toLowerCase() || '';
-      
-      // Сначала добавляем заголовок для администраторов
-      const adminHeader = document.createElement('tr');
-      adminHeader.innerHTML = `
-        <td colspan="5" class="bg-light"><strong>Администраторы</strong></td>
-      `;
-      tbody.appendChild(adminHeader);
-      
-      // Отображаем администраторов
-      const admins = data.users.filter(u => 
-        u.role === 'Admin' && 
-        (u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term))
-      );
-      
-      if (admins.length === 0) {
-        const emptyRow = document.createElement('tr');
-        emptyRow.innerHTML = '<td colspan="5" class="text-center">Нет администраторов</td>';
-        tbody.appendChild(emptyRow);
-      } else {
-        admins.forEach(u => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${u.id}</td>
-            <td>${u.name}</td>
-            <td>${u.email}</td>
-            <td>${u.role}</td>
-            <td>
-              <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser(${u.id})">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${u.id})">
-                <i class="bi bi-trash"></i>
-              </button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }
-      
-      // Добавляем заголовок для обычных пользователей
-      const userHeader = document.createElement('tr');
-      userHeader.innerHTML = `
-        <td colspan="5" class="bg-light mt-3"><strong>Пользователи</strong></td>
-      `;
-      tbody.appendChild(userHeader);
-      
-      // Отображаем пользователей
-      const users = data.users.filter(u => 
-        u.role === 'User' && 
-        (u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term))
-      );
-      
-      if (users.length === 0) {
-        const emptyRow = document.createElement('tr');
-        emptyRow.innerHTML = '<td colspan="5" class="text-center">Нет пользователей</td>';
-        tbody.appendChild(emptyRow);
-      } else {
-        users.forEach(u => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${u.id}</td>
-            <td>${u.name}</td>
-            <td>${u.email}</td>
-            <td>${u.role}</td>
-            <td>
-              <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser(${u.id})">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${u.id})">
-                <i class="bi bi-trash"></i>
-              </button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }
-    }
-    
-    document.getElementById('userSearch')?.addEventListener('input', renderUsers);
-
-    // Обработка формы добавления пользователя
-    document.getElementById('form-add-user')?.addEventListener('submit', e => {
-      e.preventDefault();
-      
-      const password = document.getElementById('user-password').value;
-      const confirmPassword = document.getElementById('user-password-confirm').value;
-      
-      // Проверка совпадения паролей
-      if (password !== confirmPassword) {
-        document.getElementById('password-error').style.display = 'block';
-        document.getElementById('user-password-confirm').classList.add('is-invalid');
-        return;
-      }
-      
-      const newId = data.users.length ? Math.max(...data.users.map(u => u.id)) + 1 : 1;
-      
-      data.users.push({
-        id: newId,
-        name: document.getElementById('user-name').value,
-        email: document.getElementById('user-email').value,
-        role: document.getElementById('user-role').value,
-        password: password
-      });
-      
-      saveData();
-      bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
-      e.target.reset();
-      renderUsers();
-      renderStats();
-    });
-
-    // Проверка совпадения паролей при добавлении пользователя
-    document.getElementById('user-password-confirm')?.addEventListener('input', function() {
-      const password = document.getElementById('user-password').value;
-      const confirmPassword = this.value;
-      
-      if (password !== confirmPassword) {
-        document.getElementById('password-error').style.display = 'block';
-        this.classList.add('is-invalid');
-      } else {
-        document.getElementById('password-error').style.display = 'none';
-        this.classList.remove('is-invalid');
-      }
-    });
-
-    function editUser(id) {
-      const idx = data.users.findIndex(u => u.id === id);
-      const u = data.users[idx];
-      
-      document.getElementById('edit-user-id').value = idx;
-      document.getElementById('edit-user-name').value = u.name;
-      document.getElementById('edit-user-email').value = u.email;
-      document.getElementById('edit-user-role').value = u.role;
-      document.getElementById('edit-user-password').value = '';
-      document.getElementById('edit-user-password-confirm').value = '';
-      
-      new bootstrap.Modal(document.getElementById('editUserModal')).show();
-    }
-
-    // Обработка формы редактирования пользователя
-    document.getElementById('form-edit-user')?.addEventListener('submit', e => {
-      e.preventDefault();
-      
-      const idx = document.getElementById('edit-user-id').value;
-      const newPassword = document.getElementById('edit-user-password').value;
-      const confirmPassword = document.getElementById('edit-user-password-confirm').value;
-      
-      // Проверка совпадения паролей, если введен новый пароль
-      if (newPassword && newPassword !== confirmPassword) {
-        document.getElementById('edit-password-error').style.display = 'block';
-        document.getElementById('edit-user-password-confirm').classList.add('is-invalid');
-        return;
-      }
-      
-      data.users[idx] = {
-        id: data.users[idx].id,
-        name: document.getElementById('edit-user-name').value,
-        email: document.getElementById('edit-user-email').value,
-        role: document.getElementById('edit-user-role').value,
-        password: newPassword ? newPassword : data.users[idx].password
-      };
-      
-      saveData();
-      bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
-      renderUsers();
-      renderStats();
-    });
-
-    // Проверка совпадения паролей при редактировании пользователя
-    document.getElementById('edit-user-password-confirm')?.addEventListener('input', function() {
-      const password = document.getElementById('edit-user-password').value;
-      const confirmPassword = this.value;
-      
-      if (password && password !== confirmPassword) {
-        document.getElementById('edit-password-error').style.display = 'block';
-        this.classList.add('is-invalid');
-      } else {
-        document.getElementById('edit-password-error').style.display = 'none';
-        this.classList.remove('is-invalid');
-      }
-    });
-
-    function deleteUser(id) {
-      if (confirm('Удалить пользователя?')) {
-        const idx = data.users.findIndex(u => u.id === id);
-        data.users.splice(idx, 1);
-        saveData();
-        renderUsers();
-        renderStats();
-      }
-    }
-
-    // Фильтры
-    const filterIds = ['scrambleSearchInput', 'scrambleDifficulty', 'matchingSearchInput', 
-                      'matchingDifficulty', 'typingSearchInput', 'typingDifficulty', 'pageSize'];
-    
-    filterIds.forEach(id => {
-      document.getElementById(id)?.addEventListener('input', () => {
-        currentPage = 1;
-        renderWords();
-      });
-      
-      document.getElementById(id)?.addEventListener('change', () => {
-        currentPage = 1;
-        renderWords();
-      });
-    });
-
-    // Инициализация
-    document.addEventListener('DOMContentLoaded', () => {
-      const lastSection = localStorage.getItem(keys.section) || 'dashboardSection';
-      document.querySelector(`.sidebar .nav-link[data-section="${lastSection}"]`).classList.add('active');
-      showSection(lastSection);
-    });
-  </script>
-</body>
-</html>
+        <h4 class="mt-4">Распределение слов</h4>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Легкие</th>
+                    <th>Средние</th>
+                    <th>Сложные</th>
+                    <th>Всего</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>Анаграммы</th>
+                    <td>{{ words_stats.scramble.easy }}</td>
+                    <td>{{ words_stats.scramble.medium }}</td>
+                    <td>{{ words_stats.scramble.hard }}</td>
+                    <td>{{ words_stats.scramble.total }}</td>
+                </tr>
+                <tr>
+                    <th>Сопоставление</th>
+                    <td>{{ words_stats.matching.easy }}</td>
+                    <td>{{ words_stats.matching.medium }}</td>
+                    <td>{{ words_stats.matching.hard }}</td>
+                    <td>{{ words_stats.matching.total }}</td>
+                </tr>
+                <tr>
+                    <th>Написание слов</th>
+                    <td>{{ words_stats.typing.easy }}</td>
+                    <td>{{ words_stats.typing.medium }}</td>
+                    <td>{{ words_stats.typing.hard }}</td>
+                    <td>{{ words_stats.typing.total }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

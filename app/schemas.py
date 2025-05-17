@@ -1,74 +1,151 @@
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import List, Optional
+from typing import List, Optional, Union
 from datetime import datetime
 
 # === Пользователи ===
 
+
 class UserBase(BaseModel):
     """Базовая схема с общими полями пользователя."""
+
     email: EmailStr
-    username: str = Field(..., min_length=3, max_length=50)
+    name: str = Field(..., min_length=2, max_length=100)
+
 
 class UserCreate(UserBase):
     """Схема для создания пользователя."""
-    password: str = Field(..., min_length=6)
+
+    password: str = Field(..., min_length=4)
+
 
 class UserUpdate(BaseModel):
     """Схема для обновления данных пользователя."""
+
     email: Optional[EmailStr] = None
-    username: Optional[str] = Field(None, min_length=3, max_length=50)
-    password: Optional[str] = Field(None, min_length=6)
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
+    password: Optional[str] = Field(None, min_length=4)
 
-class UserInDB(UserBase):
-    """Схема пользователя, хранящегося в базе данных."""
+
+class UserProfile(UserBase):
+    """Данные профиля пользователя для отображения."""
+
     id: int
-    is_active: bool
-    is_admin: bool
-    created_at: datetime
-    
+    level: int
+    experience: int
+    total_points: int
+
     class Config:
         orm_mode = True
 
-class User(UserInDB):
-    """Схема пользователя для ответов API."""
-    pass
 
-# === Элементы ===
+class UserStats(BaseModel):
+    """Статистика и достижения пользователя."""
 
-class ItemBase(BaseModel):
-    """Базовая схема элемента."""
-    title: str = Field(..., min_length=1, max_length=100)
-    description: Optional[str] = None
+    level: int
+    experience: int
+    total_points: int
+    total_games: int
+    correct_answers: int
 
-class ItemCreate(ItemBase):
-    """Схема для создания элемента."""
-    pass
-
-class ItemUpdate(BaseModel):
-    """Схема для обновления элемента."""
-    title: Optional[str] = Field(None, min_length=1, max_length=100)
-    description: Optional[str] = None
-
-class ItemInDB(ItemBase):
-    """Схема элемента, хранящегося в базе данных."""
-    id: int
-    owner_id: int
-    created_at: datetime
-    
     class Config:
         orm_mode = True
 
-class Item(ItemInDB):
-    """Схема элемента для ответов API."""
+
+# === Слова и игры ===
+
+
+class WordBase(BaseModel):
+    """Базовая схема слова."""
+
+    text: str = Field(..., min_length=1, max_length=100)
+    difficulty: str = Field(..., pattern="^(easy|medium|hard)$")
+    game_type: str = Field(..., pattern="^(scramble|matching|typing)$")
+
+
+class WordCreate(WordBase):
+    """Схема для создания слова."""
+
+    scrambled: Optional[str] = None
+    translation: Optional[str] = None
+    description: Optional[str] = None
+
+    @validator("scrambled", always=True)
+    def ensure_scrambled_for_scramble_game(cls, v, values):
+        """Проверяет, что для игры 'scramble' есть поле scrambled."""
+        if values.get("game_type") == "scramble" and not v:
+            from random import sample
+
+            text = values.get("text", "")
+            return "".join(sample(text, len(text))).upper()
+        return v
+
+
+class WordRead(WordBase):
+    """Схема слова для ответов API."""
+
+    id: int
+    scrambled: Optional[str] = None
+    translation: Optional[str] = None
+    description: Optional[str] = None
+    times_shown: int
+    times_correct: int
+
+    class Config:
+        orm_mode = True
+
+
+# === Игровые сессии ===
+
+
+class GameSessionBase(BaseModel):
+    """Базовая схема игровой сессии."""
+
+    game_type: str = Field(..., pattern="^(scramble|matching|typing)$")
+
+
+class GameSessionCreate(GameSessionBase):
+    """Схема для создания игровой сессии."""
+
     pass
 
-# === Токены ===
+
+class GameResult(BaseModel):
+    """Результаты завершенной игры."""
+
+    session_id: int
+    score: int
+    correct_answers: int
+    total_questions: int
+    experience_gained: int
+
+
+class GameSessionRead(GameSessionBase):
+    """Схема игровой сессии для ответов API."""
+
+    id: int
+    user_id: int
+    score: int
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    correct_answers: int
+    total_questions: int
+
+    class Config:
+        orm_mode = True
+
+
+# === Авторизация ===
+
 
 class Token(BaseModel):
-    """Схема JWT токена."""
+    """JWT токен."""
+
     access_token: str
     token_type: str = "bearer"
 
-class TokenData(BaseModel):
-    """Данные, хранимые в JWT токене."""
-    username: Optional[str] = None
+
+class LoginForm(BaseModel):
+    """Форма входа."""
+
+    email: EmailStr
+    password: str

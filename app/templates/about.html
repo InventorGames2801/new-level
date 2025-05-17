@@ -1,0 +1,179 @@
+{% extends "layout.html" %} {% block title %}New Level - О проекте{% endblock %}
+{% block additional_styles %} .about-container { padding-top: 130px;
+padding-bottom: 60px; } .about-header { text-align: center; margin-bottom: 60px;
+} .about-header h1 { color: var(--secondary); font-size: 3em; margin-bottom:
+20px; } .about-header p { color: #444; font-size: 1.2em; max-width: 800px;
+margin: 0 auto; } .about-section { margin-bottom: 60px; background: white;
+border-radius: 15px; padding: 40px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+.about-section h2 { color: var(--primary); margin-bottom: 20px; font-size: 2em;
+} .about-section p { margin-bottom: 20px; line-height: 1.7; color: #444; }
+.mission-goals { display: grid; grid-template-columns: repeat(auto-fit,
+minmax(300px, 1fr)); gap: 30px; margin-top: 40px; } .mission-goal { background:
+var(--bg-light); border-radius: 10px; padding: 25px; box-shadow: 0 4px 10px
+rgba(0,0,0,0.05); transition: transform 0.3s; } .mission-goal:hover { transform:
+translateY(-5px); } .mission-goal h3 { color: var(--secondary); margin-bottom:
+15px; font-size: 1.5em; } .mission-goal p { margin-bottom: 0; } .team-members {
+display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:
+30px; margin-top: 40px; } .team-member { background: white; border-radius: 10px;
+overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.08); text-align: center;
+transition: transform 0.3s; } .team-member:hover { transform: translateY(-5px);
+} .team-member img { width: 100%; height: 300px; object-fit: cover; }
+.team-member-content { padding: 20px; } .team-member h3 { color:
+var(--secondary); margin-bottom: 5px; font-size: 1.5em; } .team-member
+p.position { color: var(--primary); margin-bottom: 15px; font-weight: 600; }
+.team-member p.bio { font-size: 0.95em; line-height: 1.6; } .features { display:
+grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 25px;
+margin-top: 40px; } .feature { background: white; border: 2px solid
+var(--bg-light); border-radius: 10px; padding: 25px; text-align: center;
+transition: all 0.3s; } .feature:hover { border-color: var(--primary);
+box-shadow: 0 5px 20px rgba(0,0,0,0.1); } .feature-icon { font-size: 2.5em;
+color: var(--primary); margin-bottom: 15px; } .feature h3 { color:
+var(--secondary); margin-bottom: 15px; font-size: 1.4em; } @media (max-width:
+768px) { .about-header h1 { font-size: 2.2em; } .about-section { padding: 30px;
+} } {% endblock %} {% block content %}
+<div class="about-container">
+  <div class="container">
+    <div class="about-header">
+      <h1>О проекте New Level</h1>
+      <p>
+        Инновационный подход к изучению английского языка через игровые механики
+      </p>
+    </div>
+
+    <div class="about-section">
+      <h2>Наша история</h2>
+      <p>
+        Проект New Level был создан в 2024 году с целью сделать изучение
+        английского языка более увлекательным и эффективным. Основатели проекта,
+        будучи преподавателями и разработчиками, объединили свои знания и опыт,
+        чтобы создать платформу, которая использует принципы геймификации в
+        образовании.
+      </p>
+      <p>
+        Мы верим, что обучение должно быть не только полезным, но и интересным.
+        Поэтому мы разработали серию игр, которые помогают развивать различные
+        языковые навыки - от запоминания слов до понимания грамматических
+        конструкций.
+      </p>
+
+      <div class="mission-goals">
+        <div class="mission-goal">
+          <h3>Миссия</h3>
+          <p>
+            Сделать изучение английского языка доступным, эффективным и
+            увлекательным для каждого, независимо от возраста и уровня
+            подготовки.
+          </p>
+        </div>
+        <div class="mission-goal">
+          <h3>Видение</h3>
+          <p>
+            Стать ведущей образовательной платформой, которая трансформирует
+            традиционное обучение языкам через инновационные игровые механики.
+          </p>
+        </div>
+        <div class="mission-goal">
+          <h3>Цели</h3>
+          <p>
+            Разработать разнообразные образовательные игры, адаптированные под
+            разные уровни владения языком, и создать сообщество энтузиастов
+            изучения английского.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="about-section">
+      <h2>Наша команда</h2>
+      <p>
+        За проектом New Level стоит команда опытных специалистов, объединенных
+        страстью к образованию и технологиям. Мы постоянно работаем над
+        улучшением платформы и разработкой новых игровых механик.
+      </p>
+
+      <div class="team-members">
+        <div class="team-member">
+          <img
+            src="https://sun9-58.userapi.com/impg/KBalG7dmzuhs8hKgayoQT5c960LmSYuQnavVYA/L_HGHJGlQZQ.jpg?size=853x1091&quality=95&sign=38d289f8206b2f52d881d5e9b526dbbe&type=album"
+            alt="Иван Баженов"
+          />
+          <div class="team-member-content">
+            <h3>Иван Баженов</h3>
+            <p class="position">Fullstack-разработчик</p>
+            <p class="bio">
+              Специалист по разработке веб-приложений с опытом более 5 лет.
+              Отвечает за техническую реализацию проекта и игровые механики.
+            </p>
+          </div>
+        </div>
+        <div class="team-member">
+          <img
+            src="https://sun9-43.userapi.com/impg/FEWjl1PyNlLmxOJMTvkyViTCptE1awealKaBYA/Yjh1r0pHVy0.jpg?size=2560x2396&quality=95&sign=1a93f88441bb6595a3f5a7894fc04cd8&type=album"
+            alt="Вячеслав Шеметов"
+          />
+          <div class="team-member-content">
+            <h3>Вячеслав Шеметов</h3>
+            <p class="position">Fullstack-разработчик</p>
+            <p class="bio">
+              Эксперт в области бэкенд-разработки и баз данных. Занимается
+              архитектурой проекта и оптимизацией серверной части.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="about-section">
+      <h2>Особенности проекта</h2>
+      <p>
+        New Level - это не просто набор игр для изучения английского. Это
+        полноценная образовательная платформа с продуманной системой прогресса,
+        которая адаптируется под уровень и потребности каждого пользователя.
+      </p>
+
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">
+            <i class="fas fa-gamepad"></i>
+          </div>
+          <h3>Игровой подход</h3>
+          <p>
+            Обучение происходит через увлекательные игры, которые делают процесс
+            изучения языка интересным и затягивающим.
+          </p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <h3>Система прогресса</h3>
+          <p>
+            Каждый пользователь может отслеживать свой прогресс, получать
+            достижения и повышать уровень.
+          </p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <i class="fas fa-brain"></i>
+          </div>
+          <h3>Адаптивное обучение</h3>
+          <p>
+            Платформа подстраивается под уровень пользователя, предлагая задания
+            оптимальной сложности.
+          </p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <i class="fas fa-database"></i>
+          </div>
+          <h3>Обширная база слов</h3>
+          <p>
+            В нашей базе более 1000 слов и выражений, охватывающих различные
+            темы и уровни владения языком.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
