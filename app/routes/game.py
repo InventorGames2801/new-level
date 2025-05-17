@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Request, Depends, HTTPException, status, Body
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Query, Request, Depends, HTTPException, status, Body
 from fastapi.responses import HTMLResponse, JSONResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from app.database import get_db
-from app.models import User
+from app.database import get_db, get_random_words
+from app.models import User, UserWordHistory, Word
 from app.auth_utils import get_current_user
-from app.templates import templates
+from app.templates import templates, render_error_page
 import app.database as database
 import app.schemas as schemas
 import logging
@@ -49,13 +51,16 @@ def game_page(request: Request, current_user: User = Depends(get_current_user)):
         )
     except Exception as e:
         logger.error(f"Ошибка при отображении страницы игры: {e}")
-        return HTMLResponse(
-            content="<h1>Ошибка при загрузке игры</h1><p>Попробуйте позже</p>"
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке игры. Пожалуйста, попробуйте позже.",
+            exception=e
         )
 
 
 @router.post("/api/game/start")
 def start_game_session(
+    request: Request,
     game_type: str = Body(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -72,16 +77,20 @@ def start_game_session(
         session = database.create_game_session(db, current_user.id, game_type)
 
         return {"session_id": session.id, "game_type": game_type}
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Ошибка при создании игровой сессии: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка при создании игровой сессии",
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при создании игровой сессии",
+            exception=e
         )
 
 
 @router.post("/api/game/end")
 def end_game_session(
+    request: Request,
     session_id: int = Body(...),
     score: int = Body(...),
     correct_answers: int = Body(...),
@@ -125,71 +134,20 @@ def end_game_session(
         }
 
         return result
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Ошибка при завершении игровой сессии: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка при завершении игровой сессии",
-        )
-
-
-@router.get("/api/words/{game_type}")
-def get_words_for_game(
-    game_type: str,
-    count: int = 5,
-    difficulty: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """
-    Возвращает случайные слова для игры.
-    """
-    try:
-        if game_type not in ["scramble", "matching", "typing"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный тип игры"
-            )
-
-        # Если не указана сложность, выбираем в зависимости от уровня пользователя
-        if not difficulty:
-            # Простая логика: уровни 1-3 - easy, 4-7 - medium, 8+ - hard
-            if current_user.level < 4:
-                difficulty = "easy"
-            elif current_user.level < 8:
-                difficulty = "medium"
-            else:
-                difficulty = "hard"
-
-        words = database.get_random_words(db, game_type, count, difficulty)
-
-        # Преобразуем в формат, подходящий для игры
-        result = []
-        for word in words:
-            word_data = {"id": word.id, "difficulty": word.difficulty}
-
-            if game_type == "scramble":
-                word_data["text"] = word.text
-                word_data["scrambled"] = word.scrambled
-            elif game_type == "matching":
-                word_data["text"] = word.text
-                word_data["translation"] = word.translation
-            elif game_type == "typing":
-                word_data["text"] = word.text
-                word_data["description"] = word.description
-
-            result.append(word_data)
-
-        return result
-    except Exception as e:
-        logger.error(f"Ошибка при получении слов для игры: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка при получении слов для игры",
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при завершении игровой сессии",
+            exception=e
         )
 
 
 @router.post("/api/word/check")
 def check_word_answer(
+    request: Request,
     word_id: int = Body(...),
     answer: str = Body(...),
     current_user: User = Depends(get_current_user),
@@ -222,74 +180,95 @@ def check_word_answer(
         database.update_word_stats(db, word_id, correct)
 
         return {"correct": correct}
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Ошибка при проверке ответа: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка при проверке ответа",
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при проверке ответа",
+            exception=e
         )
 
 
 @router.get("/api/words/{game_type}")
-def get_words_for_game(
+def get_game_words(
     game_type: str,
-    count: int = 5,
+    request: Request,
+    count: int = Query(5, gt=0, le=20),
     difficulty: Optional[str] = None,
-    word_id: Optional[int] = None,  # Добавлен параметр для получения конкретного слова
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    Возвращает случайные слова для игры или конкретное слово по ID.
-    """
     try:
+        # Проверяем, что тип игры допустимый
         if game_type not in ["scramble", "matching", "typing"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный тип игры"
+            raise HTTPException(status_code=400, detail="Invalid game type")
+
+        # Получаем исключенные слова (использованные пользователем недавно)
+        excluded_ids = (
+            db.query(UserWordHistory.word_id)
+            .filter(
+                UserWordHistory.user_id == current_user.id,
+                UserWordHistory.used_at > datetime.now(timezone.utc) - timedelta(hours=48),
             )
+            .distinct()
+            .all()
+        )
+        excluded_ids = [x[0] for x in excluded_ids]
 
-        # Если указан конкретный ID слова, возвращаем только его
-        if word_id:
-            word = db.query(Word).filter(Word.id == word_id).first()
-            if not word:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail="Слово не найдено"
-                )
-            words = [word]
-        else:
-            # Если не указана сложность, выбираем в зависимости от уровня пользователя
-            if not difficulty:
-                # Простая логика: уровни 1-3 - easy, 4-7 - medium, 8+ - hard
-                if current_user.level < 4:
-                    difficulty = "easy"
-                elif current_user.level < 8:
-                    difficulty = "medium"
-                else:
-                    difficulty = "hard"
+        # Определяем сложность на основе уровня пользователя, если не указана
+        if not difficulty:
+            if current_user.level < 4:
+                difficulty = "easy"
+            elif current_user.level < 8:
+                difficulty = "medium"
+            else:
+                difficulty = "hard"
 
-            words = database.get_random_words(db, game_type, count, difficulty)
+        # Получаем случайные слова, исключая недавно использованные
+        words = get_random_words(db, current_user.id, count, difficulty, excluded_ids)
 
-        # Преобразуем в формат, подходящий для игры
+        # Подготавливаем результат
         result = []
         for word in words:
-            word_data = {"id": word.id, "difficulty": word.difficulty}
+            word_data = {
+                "id": word.id,
+                "text": word.text,
+                "translation": word.translation,
+                "description": word.description,
+                "difficulty": word.difficulty,
+            }
 
+            # Для игры "scramble" генерируем перемешанное слово динамически
             if game_type == "scramble":
-                word_data["text"] = word.text
-                word_data["scrambled"] = word.scrambled
-            elif game_type == "matching":
-                word_data["text"] = word.text
-                word_data["translation"] = word.translation
-            elif game_type == "typing":
-                word_data["text"] = word.text
-                word_data["description"] = word.description
+                from app.game_utils import create_scrambled_word
+
+                word_data["scrambled"] = create_scrambled_word(word.text)
 
             result.append(word_data)
 
         return result
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Ошибка при получении слов для игры: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка при получении слов для игры",
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при получении слов для игры",
+            exception=e
+        )
+
+
+@router.get("/api/debug/word-count")
+def get_word_count(request: Request, db: Session = Depends(get_db)):
+    try:
+        count = db.query(func.count(Word.id)).scalar()
+        return {"count": count}
+    except Exception as e:
+        logger.error(f"Ошибка при подсчете количества слов: {e}")
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при получении статистики слов",
+            exception=e
         )

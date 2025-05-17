@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, Query
 from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
-from app.models import User, Word, GameSetting, GameSession
-from app.auth_utils import get_admin_user, get_db
-from app.templates import templates
 from sqlalchemy import func
+from datetime import datetime, timezone
 import random
 import logging
-from datetime import datetime
+
+from app.database import get_users_statistics, get_words_statistics
+from app.models import User, Word, GameSetting, GameSession
+from app.auth_utils import get_admin_user, get_db
+from app.templates import templates, render_error_page
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -22,40 +24,36 @@ def admin_dashboard(
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    logger.info(
-        admin_log_format,
-        f"Администратор {current_admin.email} просматривает панель администратора",
-    )
+    try:
+        logger.info(
+            admin_log_format,
+            f"Администратор {current_admin.email} просматривает панель администратора",
+        )
 
-    users = db.query(User).all()
-    words = db.query(Word).all()
-    settings = db.query(GameSetting).all()
-    games_count = db.query(func.count(GameSession.id)).scalar() or 0
+        # Получаем расширенную статистику
+        user_stats = get_users_statistics(db)
+        words_stats = get_words_statistics(db)
 
-    words_stats = {
-        "scramble": {"easy": 0, "medium": 0, "hard": 0, "total": 0},
-        "matching": {"easy": 0, "medium": 0, "hard": 0, "total": 0},
-        "typing": {"easy": 0, "medium": 0, "hard": 0, "total": 0},
-    }
+        # Получаем общие настройки игры
+        settings = db.query(GameSetting).all()
 
-    for word in words:
-        if word.game_type in words_stats:
-            words_stats[word.game_type][word.difficulty] += 1
-            words_stats[word.game_type]["total"] += 1
-
-    return templates.TemplateResponse(
-        "admin/index.html",
-        {
-            "request": request,
-            "admin_user": current_admin,
-            "users": users,
-            "words": words,
-            "settings": settings,
-            "games_count": games_count,
-            "words_stats": words_stats,
-            "active_tab": "stats",
-        },
-    )
+        return templates.TemplateResponse(
+            "admin/index.html",
+            {
+                "request": request,
+                "admin_user": current_admin,
+                "user_stats": user_stats,
+                "words_stats": words_stats,
+                "settings": settings,
+                "active_tab": "stats",
+            },
+        )
+    except Exception as e:
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке панели администратора",
+            exception=e
+        )
 
 
 @router.get("/admin/dictionary", response_class=HTMLResponse)
@@ -64,23 +62,30 @@ def admin_dictionary(
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    logger.info(
-        admin_log_format, f"Администратор {current_admin.email} просматривает словарь"
-    )
+    try:
+        logger.info(
+            admin_log_format, f"Администратор {current_admin.email} просматривает словарь"
+        )
 
-    words = db.query(Word).all()
+        words = db.query(Word).all()
 
-    # TODO: Добавить фильтрацию и сортировку слов
+        # TODO: Добавить фильтрацию и сортировку слов
 
-    return templates.TemplateResponse(
-        "admin/dictionary.html",
-        {
-            "request": request,
-            "admin_user": current_admin,
-            "words": words,
-            "active_tab": "dictionary",
-        },
-    )
+        return templates.TemplateResponse(
+            "admin/dictionary.html",
+            {
+                "request": request,
+                "admin_user": current_admin,
+                "words": words,
+                "active_tab": "dictionary",
+            },
+        )
+    except Exception as e:
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке словаря",
+            exception=e
+        )
 
 
 @router.get("/admin/settings", response_class=HTMLResponse)
@@ -89,23 +94,30 @@ def admin_settings(
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    logger.info(
-        admin_log_format, f"Администратор {current_admin.email} просматривает настройки"
-    )
+    try:
+        logger.info(
+            admin_log_format, f"Администратор {current_admin.email} просматривает настройки"
+        )
 
-    settings = db.query(GameSetting).all()
+        settings = db.query(GameSetting).all()
 
-    # TODO: Добавить категоризацию настроек
+        # TODO: Добавить категоризацию настроек
 
-    return templates.TemplateResponse(
-        "admin/settings.html",
-        {
-            "request": request,
-            "admin_user": current_admin,
-            "settings": settings,
-            "active_tab": "settings",
-        },
-    )
+        return templates.TemplateResponse(
+            "admin/settings.html",
+            {
+                "request": request,
+                "admin_user": current_admin,
+                "settings": settings,
+                "active_tab": "settings",
+            },
+        )
+    except Exception as e:
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке настроек",
+            exception=e
+        )
 
 
 # Служебная функция для создания анаграмм с рекурсивной защитой от совпадений
@@ -122,71 +134,127 @@ def create_scrambled_word(word):
 
 @router.post("/admin/words/create")
 def create_word(
+    request: Request,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
     text: str = Form(...),
-    game_type: str = Form(...),
+    translation: str = Form(...),
+    description: str = Form(...),
     difficulty: str = Form(...),
-    scrambled: str = Form(None),
-    translation: str = Form(None),
-    description: str = Form(None),
 ):
-    logger.info(
-        admin_log_format,
-        f"Администратор {current_admin.email} создает новое слово: {text} (тип: {game_type}, сложность: {difficulty})",
-    )
-
-    if not text or len(text.strip()) == 0:
-        raise HTTPException(status_code=400, detail="Текст слова не может быть пустым")
-
-    if game_type not in ["scramble", "matching", "typing"]:
-        raise HTTPException(status_code=400, detail="Неверный тип игры")
-
-    if difficulty not in ["easy", "medium", "hard"]:
-        raise HTTPException(status_code=400, detail="Неверная сложность")
-
-    if game_type == "matching" and (not translation or len(translation.strip()) == 0):
-        raise HTTPException(
-            status_code=400, detail="Для типа 'matching' требуется перевод"
-        )
-
-    if game_type == "typing" and (not description or len(description.strip()) == 0):
-        raise HTTPException(
-            status_code=400, detail="Для типа 'typing' требуется описание"
-        )
-
     try:
-        word = Word(text=text, game_type=game_type, difficulty=difficulty)
+        logger.info(
+            admin_log_format,
+            f"Администратор {current_admin.email} создает новое слово: {text}, сложность: {difficulty}",
+        )
 
-        # Разное поведение для разных типов игр - только одно поле заполняется, остальные очищаются
-        if game_type == "scramble":
-            word.scrambled = scrambled if scrambled else create_scrambled_word(text)
-            word.translation = None
-            word.description = None
-        elif game_type == "matching":
-            word.translation = translation
-            word.scrambled = None
-            word.description = None
-        elif game_type == "typing":
-            word.description = description
-            word.scrambled = None
-            word.translation = None
+        # Валидация входных данных
+        if not text or len(text.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Текст слова не может быть пустым")
 
-        db.add(word)
+        if not translation or len(translation.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Перевод не может быть пустым")
+
+        if not description or len(description.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Описание не может быть пустым")
+
+        if difficulty not in ["easy", "medium", "hard"]:
+            raise HTTPException(status_code=400, detail="Неверная сложность")
+
+        # Создаем слово с унифицированной структурой
+        try:
+            word = Word(
+                text=text.strip(),
+                translation=translation.strip(),
+                description=description.strip(),
+                difficulty=difficulty,
+                created_at=datetime.now(timezone.utc),
+            )
+
+            db.add(word)
+            db.commit()
+
+            logger.info(admin_log_format, f"Слово '{text}' успешно создано с ID: {word.id}")
+
+            return RedirectResponse(url="/admin/dictionary", status_code=303)
+        except Exception as e:
+            db.rollback()
+            logger.error(admin_log_format, f"Ошибка при создании слова: {e}")
+            raise HTTPException(status_code=500, detail=f"Ошибка при создании слова: {e}")
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при создании слова",
+            exception=e
+        )
+
+
+@router.post("/admin/words/{word_id}/edit")
+def update_word(
+    word_id: int,
+    request: Request,
+    current_admin: User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+    text: str = Form(...),
+    translation: str = Form(...),
+    description: str = Form(...),
+    difficulty: str = Form(...),
+):
+    try:
+        # Проверяем существование слова
+        word = db.query(Word).filter(Word.id == word_id).first()
+        if not word:
+            raise HTTPException(status_code=404, detail="Слово не найдено")
+
+        logger.info(
+            admin_log_format,
+            f"Администратор {current_admin.email} обновляет слово ID: {word_id} с '{word.text}' на '{text}'",
+        )
+
+        # Валидация входных данных
+        if not text or len(text.strip()) == 0:
+            raise HTTPException(
+                status_code=400, detail="Текст слова не может быть пустым"
+            )
+
+        if not translation or len(translation.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Перевод не может быть пустым")
+
+        if not description or len(description.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Описание не может быть пустым")
+
+        if difficulty not in ["easy", "medium", "hard"]:
+            raise HTTPException(status_code=400, detail="Неверная сложность")
+
+        # Обновляем данные слова
+        word.text = text.strip()
+        word.translation = translation.strip()
+        word.description = description.strip()
+        word.difficulty = difficulty
+
         db.commit()
 
-        logger.info(admin_log_format, f"Слово '{text}' успешно создано с ID: {word.id}")
+        logger.info(admin_log_format, f"Слово ID: {word_id} успешно обновлено")
 
         return RedirectResponse(url="/admin/dictionary", status_code=303)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         db.rollback()
-        logger.error(admin_log_format, f"Ошибка при создании слова: {e}")
-        raise HTTPException(status_code=500, detail=f"Ошибка при создании слова: {e}")
+        logger.error(admin_log_format, f"Ошибка при обновлении слова: {e}")
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при обновлении слова",
+            exception=e
+        )
 
 
 @router.post("/admin/words/{word_id}/delete")
 def delete_word(
     word_id: int,
+    request: Request,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
@@ -211,7 +279,11 @@ def delete_word(
     except Exception as e:
         db.rollback()
         logger.error(admin_log_format, f"Ошибка при удалении слова: {e}")
-        raise HTTPException(status_code=500, detail=f"Ошибка при удалении слова: {e}")
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при удалении слова",
+            exception=e
+        )
 
 
 @router.get("/admin/words/{word_id}/edit", response_class=HTMLResponse)
@@ -221,105 +293,32 @@ def edit_word_form(
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    logger.info(
-        admin_log_format,
-        f"Администратор {current_admin.email} открывает форму редактирования слова ID: {word_id}",
-    )
-
-    word = db.query(Word).filter(Word.id == word_id).first()
-    if not word:
-        logger.warning(
-            admin_log_format,
-            f"Попытка редактирования несуществующего слова ID: {word_id}",
-        )
-        raise HTTPException(status_code=404, detail="Слово не найдено")
-
-    return templates.TemplateResponse(
-        "admin/edit_word.html",
-        {"request": request, "admin_user": current_admin, "word": word},
-    )
-
-
-@router.post("/admin/words/{word_id}/edit")
-def update_word(
-    word_id: int,
-    current_admin: User = Depends(get_admin_user),
-    db: Session = Depends(get_db),
-    text: str = Form(...),
-    game_type: str = Form(...),
-    difficulty: str = Form(...),
-    scrambled: str = Form(None),
-    translation: str = Form(None),
-    description: str = Form(None),
-):
-    """
-    Обновляет существующее слово с валидацией и обработкой ошибок.
-    """
     try:
-        word = db.query(Word).filter(Word.id == word_id).first()
-        if not word:
-            raise HTTPException(status_code=404, detail="Слово не найдено")
-
         logger.info(
             admin_log_format,
-            f"Администратор {current_admin.email} обновляет слово ID: {word_id} с '{word.text}' на '{text}'",
+            f"Администратор {current_admin.email} открывает форму редактирования слова ID: {word_id}",
         )
 
-        if not text or len(text.strip()) == 0:
-            raise HTTPException(
-                status_code=400, detail="Текст слова не может быть пустым"
+        word = db.query(Word).filter(Word.id == word_id).first()
+        if not word:
+            logger.warning(
+                admin_log_format,
+                f"Попытка редактирования несуществующего слова ID: {word_id}",
             )
+            raise HTTPException(status_code=404, detail="Слово не найдено")
 
-        if game_type not in ["scramble", "matching", "typing"]:
-            raise HTTPException(status_code=400, detail="Неверный тип игры")
-
-        if difficulty not in ["easy", "medium", "hard"]:
-            raise HTTPException(status_code=400, detail="Неверная сложность")
-
-        if game_type == "matching" and (
-            not translation or len(translation.strip()) == 0
-        ):
-            raise HTTPException(
-                status_code=400, detail="Для типа 'matching' требуется перевод"
-            )
-
-        if game_type == "typing" and (not description or len(description.strip()) == 0):
-            raise HTTPException(
-                status_code=400, detail="Для типа 'typing' требуется описание"
-            )
-
-        word.text = text
-        word.game_type = game_type
-        word.difficulty = difficulty
-
-        # Взаимоисключающие поля в зависимости от типа игры
-        if game_type == "scramble":
-            if not scrambled or len(scrambled.strip()) == 0:
-                word.scrambled = create_scrambled_word(text)
-            else:
-                word.scrambled = scrambled
-            word.translation = None
-            word.description = None
-        elif game_type == "matching":
-            word.translation = translation
-            word.scrambled = None
-            word.description = None
-        elif game_type == "typing":
-            word.description = description
-            word.scrambled = None
-            word.translation = None
-
-        db.commit()
-
-        logger.info(admin_log_format, f"Слово ID: {word_id} успешно обновлено")
-
-        return RedirectResponse(url="/admin/dictionary", status_code=303)
+        return templates.TemplateResponse(
+            "admin/edit_word.html",
+            {"request": request, "admin_user": current_admin, "word": word},
+        )
     except HTTPException as he:
         raise he
     except Exception as e:
-        db.rollback()
-        logger.error(admin_log_format, f"Ошибка при обновлении слова: {e}")
-        raise HTTPException(status_code=500, detail=f"Ошибка при обновлении слова: {e}")
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке формы редактирования",
+            exception=e
+        )
 
 
 @router.post("/admin/settings/update")
@@ -328,12 +327,12 @@ async def update_settings(
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    logger.info(
-        admin_log_format,
-        f"Администратор {current_admin.email} обновляет настройки приложения",
-    )
-
     try:
+        logger.info(
+            admin_log_format,
+            f"Администратор {current_admin.email} обновляет настройки приложения",
+        )
+
         form_data = await request.form()
         updated_keys = []
 
@@ -378,8 +377,10 @@ async def update_settings(
     except Exception as e:
         db.rollback()
         logger.error(admin_log_format, f"Ошибка при обновлении настроек: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Ошибка при обновлении настроек: {e}"
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при обновлении настроек",
+            exception=e
         )
 
 
@@ -391,40 +392,48 @@ def admin_users(
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    logger.info(
-        admin_log_format,
-        f"Администратор {current_admin.email} просматривает список пользователей (страница {page})",
-    )
+    try:
+        logger.info(
+            admin_log_format,
+            f"Администратор {current_admin.email} просматривает список пользователей (страница {page})",
+        )
 
-    total_users = db.query(func.count(User.id)).scalar()
-    total_pages = (total_users + per_page - 1) // per_page
+        total_users = db.query(func.count(User.id)).scalar()
+        total_pages = (total_users + per_page - 1) // per_page
 
-    # TODO: добавить фильтрацию и поиск по имени/email
+        # TODO: добавить фильтрацию и поиск по имени/email
 
-    users = (
-        db.query(User)
-        .order_by(User.id)
-        .offset((page - 1) * per_page)
-        .limit(per_page)
-        .all()
-    )
+        users = (
+            db.query(User)
+            .order_by(User.id)
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
 
-    return templates.TemplateResponse(
-        "admin/users.html",
-        {
-            "request": request,
-            "admin_user": current_admin,
-            "users": users,
-            "active_tab": "users",
-            "current_page": page,
-            "total_pages": total_pages,
-            "per_page": per_page,
-        },
-    )
+        return templates.TemplateResponse(
+            "admin/users.html",
+            {
+                "request": request,
+                "admin_user": current_admin,
+                "users": users,
+                "active_tab": "users",
+                "current_page": page,
+                "total_pages": total_pages,
+                "per_page": per_page,
+            },
+        )
+    except Exception as e:
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке списка пользователей",
+            exception=e
+        )
 
 
 @router.post("/admin/users/create")
 def create_user(
+    request: Request,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
     name: str = Form(...),
@@ -432,22 +441,22 @@ def create_user(
     password: str = Form(...),
     role: str = Form(...),
 ):
-    logger.info(
-        admin_log_format,
-        f"Администратор {current_admin.email} создает нового пользователя с email: {email}, роль: {role}",
-    )
-
-    existing = db.query(User).filter(User.email == email).first()
-    if existing:
-        logger.warning(
-            admin_log_format,
-            f"Попытка создания пользователя с существующим email: {email}",
-        )
-        raise HTTPException(
-            status_code=400, detail="Пользователь с таким email уже существует"
-        )
-
     try:
+        logger.info(
+            admin_log_format,
+            f"Администратор {current_admin.email} создает нового пользователя с email: {email}, роль: {role}",
+        )
+
+        existing = db.query(User).filter(User.email == email).first()
+        if existing:
+            logger.warning(
+                admin_log_format,
+                f"Попытка создания пользователя с существующим email: {email}",
+            )
+            raise HTTPException(
+                status_code=400, detail="Пользователь с таким email уже существует"
+            )
+
         from app.password_utils import get_password_hash
 
         user = User(
@@ -463,17 +472,22 @@ def create_user(
         )
 
         return RedirectResponse(url="/admin/users", status_code=303)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         db.rollback()
         logger.error(admin_log_format, f"Ошибка при создании пользователя: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Ошибка при создании пользователя: {e}"
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при создании пользователя",
+            exception=e
         )
 
 
 @router.post("/admin/users/{user_id}/delete")
 def delete_user(
     user_id: int,
+    request: Request,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
@@ -508,51 +522,56 @@ def delete_user(
     except Exception as e:
         db.rollback()
         logger.error(admin_log_format, f"Ошибка при удалении пользователя: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Ошибка при удалении пользователя: {e}"
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при удалении пользователя",
+            exception=e
         )
 
 
 @router.post("/admin/users/{user_id}/toggle_admin_role")
 def toggle_admin_view(
     user_id: int,
+    request: Request,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
     try:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
+            raise HTTPException(status_code=404, detail="User not found")
 
         logger.info(
             admin_log_format,
-            f"Администратор {current_admin.email} меняет роль пользователя {user.email} (ID: {user_id})",
+            f"Administrator {current_admin.email} is changing role for user {user.email} (ID: {user_id})",
         )
 
-        # Критичная проверка - предотвращаем снятие последнего администратора
+        # If we're trying to remove admin rights
         if user.role == "admin" and user.id != current_admin.id:
+            # Check how many admins are in the system
             admin_count = db.query(User).filter(User.role == "admin").count()
             if admin_count <= 1:
                 logger.warning(
                     admin_log_format,
-                    "Попытка снять права с последнего администратора системы",
+                    "Attempt to remove rights from the last system administrator",
                 )
-                raise HTTPException(
-                    status_code=400,
-                    detail="Невозможно снять права с последнего администратора системы",
+                return RedirectResponse(
+                    url="/admin/users?error=Cannot remove the last administrator from the system",
+                    status_code=303,
                 )
 
-        # Нельзя менять свою собственную роль - это может привести к потере доступа
+        # Prevent changing your own role
         if user.id == current_admin.id:
             logger.warning(
                 admin_log_format,
-                f"Администратор {current_admin.email} пытается изменить собственную роль",
+                f"Administrator {current_admin.email} attempts to change their own role",
             )
-            raise HTTPException(
-                status_code=400,
-                detail="Невозможно изменить собственную роль администратора",
+            return RedirectResponse(
+                url="/admin/users?error=You cannot change your own administrator role",
+                status_code=303,
             )
 
+        # Toggle role
         new_role = "user" if user.role == "admin" else "admin"
         user.role = new_role
 
@@ -560,13 +579,20 @@ def toggle_admin_view(
 
         logger.info(
             admin_log_format,
-            f"Роль пользователя {user.email} (ID: {user_id}) изменена на '{new_role}'",
+            f"User {user.email} (ID: {user_id}) role changed to '{new_role}'",
         )
 
-        return RedirectResponse(url="/admin/users", status_code=303)
+        return RedirectResponse(
+            url="/admin/users?success=User role successfully updated", status_code=303
+        )
     except HTTPException as he:
-        raise he
+        # Redirect with error message instead of raising the exception
+        return RedirectResponse(url=f"/admin/users?error={he.detail}", status_code=303)
     except Exception as e:
         db.rollback()
-        logger.error(admin_log_format, f"Ошибка при изменении роли пользователя: {e}")
-        raise HTTPException(status_code=500, detail=f"Ошибка при изменении роли: {e}")
+        logger.error(admin_log_format, f"Error while changing user role: {e}")
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при изменении роли пользователя",
+            exception=e
+        )

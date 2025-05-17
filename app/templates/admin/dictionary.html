@@ -384,78 +384,79 @@
       <div class="form-tab" data-form-type="typing">Написание слов</div>
     </div>
     
-    <!-- Форма добавления слова для анаграмм -->
-    <form id="form-scramble" method="post" action="/admin/words/create" class="word-form">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="text-scramble">Слово:</label>
-          <input type="text" id="text-scramble" name="text" class="form-control" required placeholder="Введите английское слово">
-        </div>
-        <div class="form-group">
-          <label for="difficulty-scramble">Сложность:</label>
-          <select id="difficulty-scramble" name="difficulty" class="form-control">
-            <option value="easy">Легкая</option>
-            <option value="medium">Средняя</option>
-            <option value="hard">Сложная</option>
-          </select>
-        </div>
-      </div>
+    <!-- Форма добавления слова -->
+<div class="admin-form">
+  <h3>Добавить новое слово</h3>
+  
+  <form id="word-form" method="post" action="/admin/words/create">
+    <div class="form-row">
       <div class="form-group">
-        <label for="scrambled">Перемешанное слово (опционально):</label>
-        <input type="text" id="scrambled" name="scrambled" class="form-control" placeholder="Оставьте пустым для автоматической генерации">
-        <small>Если не указано, будет создано автоматически</small>
-      </div>
-      <input type="hidden" name="game_type" value="scramble">
-      <button type="submit" class="btn-primary">Добавить слово</button>
-    </form>
-    
-    <!-- Форма добавления слова для сопоставлений -->
-    <form id="form-matching" method="post" action="/admin/words/create" class="word-form" style="display: none;">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="text-matching">Английское слово:</label>
-          <input type="text" id="text-matching" name="text" class="form-control" required placeholder="Введите английское слово">
-        </div>
-        <div class="form-group">
-          <label for="difficulty-matching">Сложность:</label>
-          <select id="difficulty-matching" name="difficulty" class="form-control">
-            <option value="easy">Легкая</option>
-            <option value="medium">Средняя</option>
-            <option value="hard">Сложная</option>
-          </select>
-        </div>
+        <label for="text">Английское слово:</label>
+        <input type="text" id="text" name="text" class="form-control" required placeholder="Введите английское слово">
       </div>
       <div class="form-group">
         <label for="translation">Перевод:</label>
         <input type="text" id="translation" name="translation" class="form-control" required placeholder="Введите перевод на русский">
       </div>
-      <input type="hidden" name="game_type" value="matching">
-      <button type="submit" class="btn-primary">Добавить слово</button>
-    </form>
-    
-    <!-- Форма добавления слова для написания слов -->
-    <form id="form-typing" method="post" action="/admin/words/create" class="word-form" style="display: none;">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="text-typing">Английское слово:</label>
-          <input type="text" id="text-typing" name="text" class="form-control" required placeholder="Введите английское слово">
-        </div>
-        <div class="form-group">
-          <label for="difficulty-typing">Сложность:</label>
-          <select id="difficulty-typing" name="difficulty" class="form-control">
-            <option value="easy">Легкая</option>
-            <option value="medium">Средняя</option>
-            <option value="hard">Сложная</option>
-          </select>
-        </div>
-      </div>
       <div class="form-group">
-        <label for="description">Описание/подсказка:</label>
-        <textarea id="description" name="description" class="form-control" required rows="3" placeholder="Введите описание или подсказку для этого слова"></textarea>
+        <label for="difficulty">Сложность:</label>
+        <select id="difficulty" name="difficulty" class="form-control">
+          <option value="easy">Легкая</option>
+          <option value="medium">Средняя</option>
+          <option value="hard">Сложная</option>
+        </select>
       </div>
-      <input type="hidden" name="game_type" value="typing">
-      <button type="submit" class="btn-primary">Добавить слово</button>
-    </form>
+    </div>
+    <div class="form-group">
+      <label for="description">Описание/подсказка:</label>
+      <textarea id="description" name="description" class="form-control" required rows="3" placeholder="Введите описание или подсказку для этого слова"></textarea>
+    </div>
+    <button type="submit" class="btn-primary">Добавить слово</button>
+  </form>
+</div>
+
+<!-- Таблица со словами -->
+<div class="table-container">
+  <table class="admin-table" id="words-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Слово</th>
+        <th>Перевод</th>
+        <th>Сложность</th>
+        <th>Описание</th>
+        <th>Статистика</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for word in words %}
+      <tr data-difficulty="{{ word.difficulty }}" data-word="{{ word.text }}">
+        <td>{{ word.id }}</td>
+        <td>{{ word.text }}</td>
+        <td>{{ word.translation }}</td>
+        <td>
+          {% if word.difficulty == 'easy' %}
+          <span class="badge badge-easy">Легкая</span>
+          {% elif word.difficulty == 'medium' %}
+          <span class="badge badge-medium">Средняя</span>
+          {% elif word.difficulty == 'hard' %}
+          <span class="badge badge-hard">Сложная</span>
+          {% endif %}
+        </td>
+        <td>{{ word.description|truncate(30) }}</td>
+        <td>Показано: {{ word.times_shown }} раз<br>Правильно: {{ word.times_correct }} ({{ "%.1f"|format(word.correct_ratio*100) }}%)</td>
+        <td class="action-buttons">
+          <a href="/admin/words/{{ word.id }}/edit" class="btn-primary btn-sm btn-info">Изменить</a>
+          <form method="post" action="/admin/words/{{ word.id }}/delete" style="display: inline;">
+            <button type="submit" class="btn-primary btn-sm btn-danger" onclick="return confirm('Вы уверены, что хотите удалить это слово?')">Удалить</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
   </div>
   
   <!-- Фильтры и поиск для словаря -->

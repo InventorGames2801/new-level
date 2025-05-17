@@ -37,6 +37,7 @@ def get_optional_user(request: Request, db: Session = Depends(get_db)) -> User:
 def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != "admin":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Administrator privileges required",
         )
     return current_user

@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 import os
 import logging
 
+from app.data.dictionary_example import initialize_dictionary
+
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -94,15 +96,17 @@ def setup_database():
                 logger.info(f"  Email: {admin_email}")
                 logger.info(f"  Пароль: {admin_password}")
 
-            # [Остальной код для слов и настроек остается без изменений]
+            words_added = initialize_dictionary(db)
+            if words_added > 0:
+                logger.info(f"Добавлено {words_added} начальных слов в словарь")
 
+            db.close()
+            return True
         except Exception as inner_error:
             logger.error(f"Внутренняя ошибка при настройке данных: {inner_error}")
             db.rollback()
-        finally:
             db.close()
-
-        return True
+            return False
     except Exception as outer_error:
         logger.error(f"Ошибка при настройке базы данных: {outer_error}")
         return False

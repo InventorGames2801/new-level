@@ -2,9 +2,10 @@ from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from fastapi.exceptions import RequestValidationError, HTTPException
+from fastapi.exceptions import HTTPException
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.error_handlers import (
+    http_exception_handler,
     unauthorized_exception_handler,
     not_found_exception_handler,
     generic_exception_handler,
@@ -117,6 +118,7 @@ async def startup_event():
 
 
 # Регистрируем обработчики исключений
+app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(401, unauthorized_exception_handler)
 app.add_exception_handler(
     HTTPException,

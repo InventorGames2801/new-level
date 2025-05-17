@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import asc, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import Session
@@ -8,10 +8,11 @@ import os
 import logging
 
 import random
-from datetime import datetime
+from datetime import datetime, time, timezone, timedelta
 from typing import List, Optional, Dict, Any, Tuple
 
-from app.models import User, Word, GameSession, GameSetting
+from app.config import settings
+from app.models import User, UserWordHistory, Word, GameSession, GameSetting
 from app.password_utils import get_password_hash
 
 load_dotenv()
@@ -31,7 +32,7 @@ if not DATABASE_URL:
 # Создаем движок базы данных с отладочной информацией
 engine = create_engine(
     DATABASE_URL,
-    echo=True,  # Включаем вывод SQL-запросов для отладки
+    echo=settings.DEBUG,  # SQL-логи только если DEBUG=True
     # Для SQLite нужно убедиться, что check_same_thread=False
     connect_args=(
         {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
@@ -157,7 +158,7 @@ def update_user_last_login(db: Session, user_id: int) -> None:
     """Обновление времени последнего входа."""
     user = get_user(db, user_id)
     if user:
-        user.last_login = datetime.utcnow()
+        user.last_login = datetime.now(timezone.utc)
         db.commit()
 
 
@@ -222,6 +223,51 @@ def get_user_stats(db: Session, user_id: int) -> Dict[str, Any]:
     }
 
 
+def get_users_statistics(db: Session) -> Dict[str, Any]:
+    """
+    Получает статистику по пользователям системы.
+
+    Returns:
+        Словарь с различными статистическими показателями
+    """
+    # Общее количество пользователей
+    total_users = db.query(func.count(User.id)).scalar() or 0
+
+    # Количество пользователей, зарегистрированных за последние 30 дней
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    new_users_30_days = (
+        db.query(func.count(User.id))
+        .filter(User.created_at >= thirty_days_ago)
+        .scalar()
+        or 0
+    )
+
+    # Активные пользователи (с активностью за последние 7 дней)
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    active_users = (
+        db.query(func.count(User.id.distinct()))
+        .filter(User.last_login >= seven_days_ago)
+        .scalar()
+        or 0
+    )
+
+    # Статистика по уровням
+    level_stats = (
+        db.query(User.level, func.count(User.id).label("count"))
+        .group_by(User.level)
+        .all()
+    )
+
+    level_distribution = {level: count for level, count in level_stats}
+
+    return {
+        "total_users": total_users,
+        "new_users_30_days": new_users_30_days,
+        "active_users_7_days": active_users,
+        "level_distribution": level_distribution,
+    }
+
+
 # === Слова ===
 
 
@@ -235,50 +281,35 @@ def create_word(db: Session, **kwargs) -> Word:
 
 
 def get_random_words(
-    db: Session, game_type: str, count: int = 5, difficulty: Optional[str] = None
+    db: Session,
+    user_id: int,
+    count: int = 5,
+    difficulty: Optional[str] = None,
+    excluded_ids: List[int] = None,
 ) -> List[Word]:
-    """Получение случайных слов для игры с заданными параметрами."""
-    query = db.query(Word).filter(Word.game_type == game_type)
+    """Gets random words for a game, excluding those used recently"""
+
+    query = db.query(Word)
 
     if difficulty:
         query = query.filter(Word.difficulty == difficulty)
 
-    # Получаем все подходящие слова
-    words = query.all()
+    if excluded_ids:
+        query = query.filter(~Word.id.in_(excluded_ids))
 
-    # Если слов меньше, чем запрошено, вернем все что есть
-    if len(words) <= count:
-        return words
+    available_words = query.all()
 
-    # Выбираем случайные слова с учетом статистики
-    # Слова, которые показывались меньше, имеют больший шанс быть выбранными
-    weighted_words = []
-    for word in words:
-        # Базовый вес для всех слов
-        weight = 10
-        # Уменьшаем вес для часто показываемых слов (но не меньше 1)
-        if word.times_shown > 0:
-            weight = max(1, weight - min(9, word.times_shown))
-        weighted_words.extend([word] * weight)
+    if len(available_words) <= count:
+        return available_words
 
-    # Выбираем случайные слова
-    selected = []
-    remaining = weighted_words.copy()
+    selected_words = random.sample(available_words, count)
 
-    for _ in range(min(count, len(words))):
-        if not remaining:
-            break
-        chosen = random.choice(remaining)
-        # Удаляем все экземпляры выбранного слова, чтобы избежать дубликатов
-        remaining = [w for w in remaining if w.id != chosen.id]
-        selected.append(chosen)
-
-    # Увеличиваем счетчик показов для выбранных слов
-    for word in selected:
+    for word in selected_words:
         word.times_shown += 1
-    db.commit()
+        word.last_used_at = datetime.now(timezone.utc)
 
-    return selected
+    db.commit()
+    return selected_words
 
 
 def update_word_stats(db: Session, word_id: int, correct: bool) -> None:
@@ -288,6 +319,101 @@ def update_word_stats(db: Session, word_id: int, correct: bool) -> None:
         if correct:
             word.times_correct += 1
         db.commit()
+
+
+def get_words_statistics(db: Session) -> Dict[str, Any]:
+    """
+    Получает расширенную статистику по словам системы.
+
+    Returns:
+        Словарь с различными статистическими показателями
+    """
+    # Общее количество слов
+    total_words = db.query(func.count(Word.id)).scalar() or 0
+
+    # Распределение по сложности
+    difficulty_stats = (
+        db.query(Word.difficulty, func.count(Word.id).label("count"))
+        .group_by(Word.difficulty)
+        .all()
+    )
+
+    difficulty_distribution = {diff: count for diff, count in difficulty_stats}
+
+    # Наиболее часто используемые слова
+    most_used_words = db.query(Word).order_by(desc(Word.times_shown)).limit(10).all()
+
+    # Слова с наихудшим процентом правильных ответов (минимум 5 показов)
+    problematic_words = (
+        db.query(Word)
+        .filter(Word.times_shown >= 5)
+        .order_by(asc(Word.correct_ratio))
+        .limit(10)
+        .all()
+    )
+
+    # Статистика использования по дням
+    current_date = datetime.now(timezone.utc).date()
+    usage_stats = []
+
+    for days_back in range(30):
+        date = current_date - timedelta(days=days_back)
+        start_of_day = datetime.combine(date, time.min)
+        end_of_day = datetime.combine(date, time.max)
+
+        count = (
+            db.query(func.count(UserWordHistory.id))
+            .filter(
+                UserWordHistory.used_at >= start_of_day,
+                UserWordHistory.used_at <= end_of_day,
+            )
+            .scalar()
+            or 0
+        )
+
+        correct = (
+            db.query(func.count(UserWordHistory.id))
+            .filter(
+                UserWordHistory.used_at >= start_of_day,
+                UserWordHistory.used_at <= end_of_day,
+                UserWordHistory.correct == True,
+            )
+            .scalar()
+            or 0
+        )
+
+        usage_stats.append(
+            {
+                "date": date.strftime("%Y-%m-%d"),
+                "total": count,
+                "correct": correct,
+                "ratio": correct / count if count > 0 else 0,
+            }
+        )
+
+    return {
+        "total_words": total_words,
+        "difficulty_distribution": difficulty_distribution,
+        "most_used_words": [
+            {
+                "id": word.id,
+                "text": word.text,
+                "times_shown": word.times_shown,
+                "correct_ratio": word.correct_ratio,
+            }
+            for word in most_used_words
+        ],
+        "problematic_words": [
+            {
+                "id": word.id,
+                "text": word.text,
+                "times_shown": word.times_shown,
+                "correct_ratio": word.correct_ratio,
+            }
+            for word in problematic_words
+        ],
+        "usage_stats": usage_stats,
+    }
 
 
 # === Игровые сессии ===
@@ -311,7 +437,7 @@ def complete_game_session(
         session.score = score
         session.correct_answers = correct_answers
         session.total_questions = total_questions
-        session.completed_at = datetime.utcnow()
+        session.completed_at = datetime.now(timezone.utc)
 
         db.commit()
         db.refresh(session)

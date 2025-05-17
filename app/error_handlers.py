@@ -1,10 +1,55 @@
 from fastapi import Request, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.exceptions import HTTPException
 from app.templates import templates
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """
+    Обработчик HTTP-исключений, учитывающий тип запроса (API или веб-страница)
+    """
+    # Для API-запросов возвращаем JSON с ошибкой
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+    # Для страниц административной панели перенаправляем с сообщением об ошибке
+    if request.url.path.startswith("/admin"):
+        return RedirectResponse(url=f"/admin?error={exc.detail}", status_code=303)
+
+    # Для обычных веб-страниц показываем шаблон с ошибкой
+    error_type = "error"
+    title = "Ошибка"
+
+    if exc.status_code == 401:
+        template = "errors/401.html"
+        title = "Требуется авторизация"
+    elif exc.status_code == 403:
+        template = "errors/403.html"
+        title = "Доступ запрещен"
+    elif exc.status_code == 404:
+        template = "errors/404.html"
+        title = "Страница не найдена"
+    else:
+        template = "errors/500.html"
+        title = "Ошибка сервера"
+
+    # Если пользователь запрашивает через popup, перенаправляем с ошибкой в URL
+    use_popup = request.query_params.get("use_popup") == "true"
+    if use_popup:
+        return RedirectResponse(
+            url=f"/{request.query_params.get('redirect_to', '')}?error={exc.detail}",
+            status_code=303,
+        )
+
+    return HTMLResponse(
+        content=templates.TemplateResponse(
+            template, {"request": request, "error": exc.detail, "title": title}
+        ).body,
+        status_code=exc.status_code,
+    )
 
 
 async def unauthorized_exception_handler(request: Request, exc: HTTPException):

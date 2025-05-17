@@ -1,17 +1,17 @@
 {% extends "layout.html" %}
-{% block title %}Административная панель{% endblock %}
+{% block title %}Панель администратора{% endblock %}
 
 {% block additional_styles %}
 <style>
   body {
     font-family: Arial, sans-serif;
-    background-color: #CCCCFF; /* Лавандовый фон */
+    background-color: #CCCCFF;
   }
   
   .admin-container {
     width: 100%;
     max-width: 1200px;
-    margin: 120px auto 30px;  /* Увеличен отступ сверху для учета фиксированного заголовка */
+    margin: 120px auto 30px;
     padding: 20px;
   }
   
@@ -52,40 +52,97 @@
     color: white;
   }
   
-  /* Заголовки */
-  h2 {
-    margin: 20px 0;
-    font-size: 24px;
+  h2, h3, h4 {
     color: #333;
   }
   
-  /* Блоки статистики */
-  .stat-card {
-    border-radius: 4px;
-    padding: 30px;
-    text-align: center;
-    color: white;
+  h2 {
+    font-size: 24px;
+    margin: 20px 0;
+  }
+  
+  h3 {
+    font-size: 20px;
+    margin: 15px 0;
+    color: var(--secondary);
+  }
+  
+  h4 {
+    font-size: 16px;
+    margin: 15px 0;
+  }
+  
+  /* Статистические карточки */
+  .stats-section {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  
+  .stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
     margin-bottom: 20px;
   }
   
-  .stat-card.green {
-    background-color: #2E8B57; /* Зеленый */
+  .stat-card {
+    flex: 1;
+    min-width: 180px;
+    background-color: #f8f8ff;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
   }
   
-  .stat-card.blue {
-    background-color: #1E90FF; /* Синий */
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   }
   
-  .stat-card h1 {
-    font-size: 48px;
+  .stat-card h4 {
+    margin-top: 0;
+    color: #555;
+    font-size: 14px;
+  }
+  
+  .stat-card .value {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--primary);
     margin: 10px 0;
   }
   
+  .stat-card .percentage {
+    font-size: 14px;
+    color: #666;
+  }
+  
+  /* Графики */
+  .chart-container {
+    background-color: #f8f8ff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    height: 300px;
+  }
+  
   /* Таблицы */
+  .table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+  }
+  
   .admin-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 20px 0 30px 0;
+    margin: 0 0 20px 0;
+    background-color: white;
   }
   
   .admin-table th, .admin-table td {
@@ -95,51 +152,81 @@
   }
   
   .admin-table th {
-    background-color: #F8F8FF; /* Очень светлый лавандовый */
+    background-color: #F8F8FF;
     color: #333;
+    position: sticky;
+    top: 0;
+    z-index: 1;
   }
   
   .admin-table tr:nth-child(odd) {
-    background-color: #DADAFF; /* Более темный лавандовый */
+    background-color: #DADAFF;
   }
   
   .admin-table tr:nth-child(even) {
-    background-color: #E8E8FF; /* Светлый лавандовый */
+    background-color: #E8E8FF;
   }
   
-  /* Формы */
-  .admin-form {
-    background-color: #F8F8FF;
-    padding: 20px;
+  .admin-table tr:hover {
+    background-color: #f0f0ff;
+  }
+  
+  /* Метрики */
+  .metrics-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .metric-card {
+    background-color: #f8f8ff;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  }
+  
+  .metric-card h4 {
+    margin-top: 0;
+    color: #555;
+    font-size: 16px;
+  }
+  
+  /* Бейджи */
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
     border-radius: 4px;
-    margin-bottom: 30px;
-  }
-  
-  .form-group {
-    margin-bottom: 15px;
-  }
-  
-  .form-group label {
-    display: block;
-    margin-bottom: 5px;
+    font-size: 12px;
     font-weight: bold;
+    color: white;
   }
   
-  .form-control {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+  .badge-easy {
+    background-color: #28a745;
   }
   
-  /* Кнопки */
+  .badge-medium {
+    background-color: #ffc107;
+    color: #212529;
+  }
+  
+  .badge-hard {
+    background-color: #dc3545;
+  }
+  
+  /* Кнопки действий */
   .btn-primary {
     background-color: #9400D3;
     color: white;
     border: none;
-    padding: 8px 16px;
+    padding: 8px 12px;
     border-radius: 4px;
     cursor: pointer;
+    font-weight: bold;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
   }
   
   .btn-sm {
@@ -147,18 +234,17 @@
     font-size: 12px;
   }
   
-  /* Секции */
-  .admin-section {
-    margin-bottom: 40px;
+  .btn-primary:hover {
+    background-color: #7B00AD;
   }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="admin-container">
-  <!-- Навигационные вкладки - это ключевая часть, которая отсутствовала -->
+  <!-- Навигационные вкладки -->
   <div class="admin-nav">
-    <a href="/admin" {% if active_tab == 'stats' or not active_tab %}class="active"{% endif %}>Статистика</a>
+    <a href="/admin" {% if active_tab == 'stats' %}class="active"{% endif %}>Статистика</a>
     <a href="/admin/users" {% if active_tab == 'users' %}class="active"{% endif %}>Пользователи</a>
     <a href="/admin/dictionary" {% if active_tab == 'dictionary' %}class="active"{% endif %}>Словарь</a>
     <a href="/admin/settings" {% if active_tab == 'settings' %}class="active"{% endif %}>Настройки</a>
@@ -167,58 +253,364 @@
   <!-- Кнопка возврата -->
   <a href="/" class="back-button">Вернуться на сайт</a>
   
-  <!-- Статистика приложения -->
-  <div class="admin-section">
-    <h2>Статистика приложения</h2>
-    
-    <!-- Зеленый блок статистики -->
-    <div class="stat-card green">
-      <h1>{{ words|length }}</h1>
-      <div>Всего слов</div>
+  <h2>Панель управления</h2>
+  
+  <!-- Обзорная статистика -->
+  <div class="stats-section">
+    <h3>Обзор системы</h3>
+    <div class="stats-row">
+      <div class="stat-card">
+        <h4>Пользователей</h4>
+        <div class="value">{{ user_stats.total_users }}</div>
+      </div>
+      <div class="stat-card">
+        <h4>Слов в словаре</h4>
+        <div class="value">{{ words_stats.total_words }}</div>
+      </div>
+      <div class="stat-card">
+        <h4>Игр сыграно</h4>
+        <div class="value">{{ words_stats.total_games|default(0) }}</div>
+      </div>
+      <div class="stat-card">
+        <h4>Активность (7 дней)</h4>
+        <div class="value">{{ user_stats.active_users_7_days }}</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Статистика пользователей -->
+  <div class="stats-section">
+    <h3>Статистика пользователей</h3>
+    <div class="stats-row">
+      <div class="stat-card">
+        <h4>Всего пользователей</h4>
+        <div class="value">{{ user_stats.total_users }}</div>
+      </div>
+      <div class="stat-card">
+        <h4>Новых за 30 дней</h4>
+        <div class="value">{{ user_stats.new_users_30_days }}</div>
+        <div class="percentage">
+          {% if user_stats.total_users > 0 %}
+            {{ "%.1f"|format(user_stats.new_users_30_days / user_stats.total_users * 100) }}%
+          {% else %}
+            0%
+          {% endif %}
+        </div>
+      </div>
+      <div class="stat-card">
+        <h4>Активных за 7 дней</h4>
+        <div class="value">{{ user_stats.active_users_7_days }}</div>
+        <div class="percentage">
+          {% if user_stats.total_users > 0 %}
+            {{ "%.1f"|format(user_stats.active_users_7_days / user_stats.total_users * 100) }}%
+          {% else %}
+            0%
+          {% endif %}
+        </div>
+      </div>
     </div>
     
-    <!-- Синий блок статистики -->
-    <div class="stat-card blue">
-      <h1>{{ games_count }}</h1>
-      <div>Игр сыграно</div>
+    <!-- График распределения пользователей по уровням -->
+    <div class="chart-container">
+      <canvas id="userLevelsChart"></canvas>
     </div>
     
-    <!-- Таблица распределения -->
-    <h3>Распределение слов по категориям</h3>
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th></th>
-          <th>Легкие</th>
-          <th>Средние</th>
-          <th>Сложные</th>
-          <th>Всего</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Анаграммы</td>
-          <td>{{ words_stats.scramble.easy }}</td>
-          <td>{{ words_stats.scramble.medium }}</td>
-          <td>{{ words_stats.scramble.hard }}</td>
-          <td>{{ words_stats.scramble.total }}</td>
-        </tr>
-        <tr>
-          <td>Сопоставление</td>
-          <td>{{ words_stats.matching.easy }}</td>
-          <td>{{ words_stats.matching.medium }}</td>
-          <td>{{ words_stats.matching.hard }}</td>
-          <td>{{ words_stats.matching.total }}</td>
-        </tr>
-        <tr>
-          <td>Написание слов</td>
-          <td>{{ words_stats.typing.easy }}</td>
-          <td>{{ words_stats.typing.medium }}</td>
-          <td>{{ words_stats.typing.hard }}</td>
-          <td>{{ words_stats.typing.total }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <!-- Последние зарегистрированные пользователи -->
+    <h4>Недавние регистрации</h4>
+    <div class="table-container">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Имя</th>
+            <th>Email</th>
+            <th>Уровень</th>
+            <th>Дата регистрации</th>
+            <th>Последний вход</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if user_stats.recent_users is defined %}
+            {% for user in user_stats.recent_users %}
+            <tr>
+              <td>{{ user.id }}</td>
+              <td>{{ user.name }}</td>
+              <td>{{ user.email }}</td>
+              <td>{{ user.level }}</td>
+              <td>{{ user.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+              <td>{{ user.last_login.strftime('%d.%m.%Y %H:%M') if user.last_login else 'Нет данных' }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" style="text-align: center;">Нет данных для отображения</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- Статистика словаря -->
+  <div class="stats-section">
+    <h3>Статистика словаря</h3>
+    <div class="stats-row">
+      <div class="stat-card">
+        <h4>Всего слов</h4>
+        <div class="value">{{ words_stats.total_words }}</div>
+      </div>
+      <div class="stat-card">
+        <h4>Легкие слова</h4>
+        <div class="value">
+          {% if words_stats.difficulty_distribution is defined and words_stats.difficulty_distribution.easy is defined %}
+            {{ words_stats.difficulty_distribution.easy }}
+          {% else %}
+            0
+          {% endif %}
+        </div>
+        <div class="percentage">
+          {% if words_stats.total_words > 0 and words_stats.difficulty_distribution is defined and words_stats.difficulty_distribution.easy is defined %}
+            {{ "%.1f"|format(words_stats.difficulty_distribution.easy / words_stats.total_words * 100) }}%
+          {% else %}
+            0%
+          {% endif %}
+        </div>
+      </div>
+      <div class="stat-card">
+        <h4>Средние слова</h4>
+        <div class="value">
+          {% if words_stats.difficulty_distribution is defined and words_stats.difficulty_distribution.medium is defined %}
+            {{ words_stats.difficulty_distribution.medium }}
+          {% else %}
+            0
+          {% endif %}
+        </div>
+        <div class="percentage">
+          {% if words_stats.total_words > 0 and words_stats.difficulty_distribution is defined and words_stats.difficulty_distribution.medium is defined %}
+            {{ "%.1f"|format(words_stats.difficulty_distribution.medium / words_stats.total_words * 100) }}%
+          {% else %}
+            0%
+          {% endif %}
+        </div>
+      </div>
+      <div class="stat-card">
+        <h4>Сложные слова</h4>
+        <div class="value">
+          {% if words_stats.difficulty_distribution is defined and words_stats.difficulty_distribution.hard is defined %}
+            {{ words_stats.difficulty_distribution.hard }}
+          {% else %}
+            0
+          {% endif %}
+        </div>
+        <div class="percentage">
+          {% if words_stats.total_words > 0 and words_stats.difficulty_distribution is defined and words_stats.difficulty_distribution.hard is defined %}
+            {{ "%.1f"|format(words_stats.difficulty_distribution.hard / words_stats.total_words * 100) }}%
+          {% else %}
+            0%
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- График активности по дням -->
+    <div class="chart-container">
+      <canvas id="wordActivityChart"></canvas>
+    </div>
+    
+    <!-- Проблемные слова -->
+    <h4>Слова с наихудшими результатами</h4>
+    <div class="table-container">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Слово</th>
+            <th>Сложность</th>
+            <th>Использований</th>
+            <th>Процент правильных</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if words_stats.problematic_words is defined %}
+            {% for word in words_stats.problematic_words %}
+            <tr>
+              <td>{{ word.id }}</td>
+              <td>{{ word.text }}</td>
+              <td>
+                {% if word.difficulty == 'easy' %}
+                <span class="badge badge-easy">Легкая</span>
+                {% elif word.difficulty == 'medium' %}
+                <span class="badge badge-medium">Средняя</span>
+                {% elif word.difficulty == 'hard' %}
+                <span class="badge badge-hard">Сложная</span>
+                {% endif %}
+              </td>
+              <td>{{ word.times_shown }}</td>
+              <td>{{ "%.1f"|format(word.correct_ratio * 100) }}%</td>
+              <td>
+                <a href="/admin/words/{{ word.id }}/edit" class="btn-primary btn-sm">Редактировать</a>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" style="text-align: center;">Нет данных для отображения</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Данные для графика распределения пользователей по уровням
+    const userLevelsChart = new Chart(
+      document.getElementById('userLevelsChart'),
+      {
+        type: 'bar',
+        data: {
+          labels: [
+            {% if user_stats.level_distribution is defined %}
+              {% for level, count in user_stats.level_distribution.items() %}
+                "Уровень {{ level }}",
+              {% endfor %}
+            {% else %}
+              "Уровень 1", "Уровень 2", "Уровень 3"
+            {% endif %}
+          ],
+          datasets: [{
+            label: 'Количество пользователей',
+            data: [
+              {% if user_stats.level_distribution is defined %}
+                {% for level, count in user_stats.level_distribution.items() %}
+                  {{ count }},
+                {% endfor %}
+              {% else %}
+                0, 0, 0
+              {% endif %}
+            ],
+            backgroundColor: 'rgba(148, 0, 211, 0.6)',
+            borderColor: 'rgba(148, 0, 211, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Распределение пользователей по уровням',
+              font: {
+                size: 16
+              }
+            },
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Количество пользователей'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Уровень'
+              }
+            }
+          }
+        }
+      }
+    );
+    
+    // Данные для графика активности слов
+    const wordActivityChart = new Chart(
+      document.getElementById('wordActivityChart'),
+      {
+        type: 'line',
+        data: {
+          labels: [
+            {% if words_stats.usage_stats is defined %}
+              {% for stat in words_stats.usage_stats %}
+                "{{ stat.date }}",
+              {% endfor %}
+            {% else %}
+              "День 1", "День 2", "День 3", "День 4", "День 5", "День 6", "День 7"
+            {% endif %}
+          ],
+          datasets: [{
+            label: 'Всего использований',
+            data: [
+              {% if words_stats.usage_stats is defined %}
+                {% for stat in words_stats.usage_stats %}
+                  {{ stat.total }},
+                {% endfor %}
+              {% else %}
+                0, 0, 0, 0, 0, 0, 0
+              {% endif %}
+            ],
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 2,
+            tension: 0.3
+          }, {
+            label: 'Правильные ответы',
+            data: [
+              {% if words_stats.usage_stats is defined %}
+                {% for stat in words_stats.usage_stats %}
+                  {{ stat.correct }},
+                {% endfor %}
+              {% else %}
+                0, 0, 0, 0, 0, 0, 0
+              {% endif %}
+            ],
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 2,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Активность использования слов за последние 30 дней',
+              font: {
+                size: 16
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Количество'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Дата'
+              }
+            }
+          }
+        }
+      }
+    );
+  });
+</script>
 {% endblock %}

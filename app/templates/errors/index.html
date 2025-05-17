@@ -1,0 +1,95 @@
+{% extends "layout.html" %} {% block title %}Ошибка {{
+status_code|default("сервера") }}{% endblock %} {% block additional_styles %}
+<style>
+  .error-container {
+    margin-top: 150px;
+    padding: 40px 20px;
+    text-align: center;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .error-code {
+    font-size: 72px;
+    font-weight: 800;
+    color: var(--primary);
+    margin-bottom: 20px;
+  }
+  .error-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--secondary);
+    margin-bottom: 20px;
+  }
+  .error-message {
+    font-size: 18px;
+    color: #555;
+    margin-bottom: 30px;
+    line-height: 1.6;
+  }
+  .error-actions {
+    margin-top: 30px;
+  }
+  .error-actions .btn {
+    margin: 0 10px;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="error-container">
+  <div class="error-code">{{ status_code|default("500") }}</div>
+
+  {% if status_code == 404 %}
+  <h1 class="error-title">Страница не найдена</h1>
+  {% elif status_code == 403 %}
+  <h1 class="error-title">Доступ запрещен</h1>
+  {% elif status_code == 401 %}
+  <h1 class="error-title">Необходима авторизация</h1>
+  {% else %}
+  <h1 class="error-title">Что-то пошло не так</h1>
+  {% endif %}
+
+  <div class="error-message">
+    {% if status_code == 404 %}
+    <p>Запрошенная вами страница не существует или была перемещена.</p>
+    {% elif status_code == 403 %}
+    <p>У вас нет прав для доступа к этой странице.</p>
+    {% elif status_code == 401 %}
+    <p>Для доступа к этой странице необходимо авторизоваться.</p>
+    {% else %}
+    <p>На сервере произошла непредвиденная ошибка.</p>
+    {% endif %}
+
+    <p>
+      {% if error_message %} {{ error_message }} {% else %} Мы уже работаем над
+      исправлением. Пожалуйста, попробуйте обновить страницу или вернитесь
+      позднее. {% endif %}
+    </p>
+  </div>
+
+  <div class="error-actions">
+    {% if status_code == 401 %}
+    <a href="/login" class="btn">
+      <i class="fas fa-sign-in-alt"></i>
+      Войти в систему
+    </a>
+    {% else %}
+    <a href="javascript:location.reload()" class="btn">
+      <i class="fas fa-sync"></i>
+      Обновить страницу
+    </a>
+    {% endif %}
+
+    <a href="/" class="btn">
+      <i class="fas fa-home"></i>
+      На главную
+    </a>
+
+    {% if referrer %}
+    <a href="{{ referrer }}" class="btn">
+      <i class="fas fa-arrow-left"></i>
+      Вернуться назад
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

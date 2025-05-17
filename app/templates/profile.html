@@ -1,37 +1,152 @@
 {% extends "layout.html" %} {% block title %}New Level - Профиль{% endblock %}
-{% block additional_styles %} .profile-container { margin-top: 120px; max-width:
-600px; background: #fff; padding: 40px; border: 2px solid var(--primary);
-border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-left: auto;
-margin-right: auto; margin-bottom: 80px; } .profile-container h2 { text-align:
-center; color: var(--secondary); margin-bottom: 30px; font-size: 28px; }
-.profile-stats { background: #f9f9f9; border-radius: 10px; padding: 20px;
-margin-bottom: 30px; } .profile-stats h3 { color: var(--secondary); font-size:
-20px; margin-bottom: 15px; } .stats-grid { display: grid; grid-template-columns:
-repeat(3, 1fr); gap: 15px; } .stat-item { text-align: center; } .stat-value {
-font-size: 24px; font-weight: bold; color: var(--primary); } .stat-label {
-font-size: 14px; color: #666; } .level-progress { margin-top: 25px; }
-.level-progress-title { display: flex; justify-content: space-between;
-margin-bottom: 8px; font-size: 14px; color: #555; } .level-bar { height: 15px;
-background: #eaeaea; border-radius: 10px; overflow: hidden; } .level-fill {
-height: 100%; background: var(--gradient); border-radius: 10px; transition:
-width 0.3s; } .profile-form { display: flex; flex-direction: column; gap: 15px;
-} .form-group { display: flex; flex-direction: column; gap: 5px; } .form-group
-label { font-size: 14px; font-weight: 600; color: #444; } .form-group input {
-padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px;
-transition: all 0.3s; } .form-group input:focus { border-color: var(--primary);
-outline: none; box-shadow: 0 0 0 3px rgba(148, 0, 211, 0.1); } .profile-form
-button { padding: 12px; background: var(--primary); color: white; border: none;
-border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;
-transition: background 0.3s; margin-top: 10px; } .profile-form button:hover {
-background: var(--secondary); } .password-section { margin-top: 20px;
-padding-top: 20px; border-top: 1px solid #eee; } .password-section h3 { color:
-var(--secondary); font-size: 18px; margin-bottom: 15px; } .form-footer {
-text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid
-#eee; } .form-footer a { color: var(--primary); text-decoration: none;
-font-weight: 600; transition: all 0.3s; } .form-footer a:hover { color:
-var(--secondary); text-decoration: underline; } .form-error-list {
-margin-bottom: 15px; background-color: #f8d7da; color: #721c24; border: 1px
-solid #f5c6cb; border-radius: 6px; padding: 12px; list-style-position: inside; }
+{% block additional_styles %}
+<style>
+  .profile-container {
+    margin-top: 120px;
+    max-width: 600px;
+    background: #fff;
+    padding: 40px;
+    border: 2px solid var(--primary);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 80px;
+  }
+  .profile-container h2 {
+    text-align: center;
+    color: var(--secondary);
+    margin-bottom: 30px;
+    font-size: 28px;
+  }
+  .profile-stats {
+    background: #f9f9f9;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+  .profile-stats h3 {
+    color: var(--secondary);
+    font-size: 20px;
+    margin-bottom: 15px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+  }
+  .stat-item {
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--primary);
+  }
+  .stat-label {
+    font-size: 14px;
+    color: #666;
+  }
+  .level-progress {
+    margin-top: 25px;
+  }
+  .level-progress-title {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #555;
+  }
+  .level-bar {
+    height: 15px;
+    background: #eaeaea;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .level-fill {
+    height: 100%;
+    background: var(--gradient);
+    border-radius: 10px;
+    transition: width 0.3s;
+  }
+  .profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .form-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #444;
+  }
+  .form-group input {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.3s;
+  }
+  .form-group input:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(148, 0, 211, 0.1);
+  }
+  .profile-form button {
+    padding: 12px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+    margin-top: 10px;
+  }
+  .profile-form button:hover {
+    background: var(--secondary);
+  }
+  .password-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+  }
+  .password-section h3 {
+    color: var(--secondary);
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+  .form-footer {
+    text-align: center;
+    margin-top: 25px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+  }
+  .form-footer a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+  .form-footer a:hover {
+    color: var(--secondary);
+    text-decoration: underline;
+  }
+  .form-error-list {
+    margin-bottom: 15px;
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: 6px;
+    padding: 12px;
+    list-style-position: inside;
+  }
+</style>
 {% endblock %} {% block content %}
 <div class="profile-container">
   <h2>Профиль</h2>

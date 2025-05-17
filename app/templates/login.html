@@ -1,25 +1,69 @@
 {% extends "layout.html" %} {% block title %}New Level - Вход{% endblock %} {%
-block additional_styles %} .login-container { margin-top: 120px; max-width:
-400px; background: #fff; padding: 40px; border: 2px solid var(--primary);
-border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-left: auto;
-margin-right: auto; margin-bottom: 80px; } .login-container h2 { text-align:
-center; color: var(--secondary); margin-bottom: 20px; } .login-form { display:
-flex; flex-direction: column; gap: 15px; } .login-form input { padding: 12px;
-border: 1px solid #ccc; border-radius: 8px; font-size: 16px; } .login-form
-input:focus { border-color: var(--primary); outline: none; } .login-form button
-{ padding: 12px; background: var(--primary); color: white; border: none;
-border-radius: 8px; font-size: 16px; cursor: pointer; transition: background
-0.3s; } .login-form button:hover { background: var(--secondary); } .login-footer
-{ text-align: center; margin-top: 20px; font-size: 0.9em; color: #666; }
-.login-footer a { color: var(--primary); text-decoration: none; font-weight:
-600; } .login-footer a:hover { text-decoration: underline; } {% endblock %} {%
-block content %}
+block additional_styles %}
+<style>
+  .login-container {
+    margin-top: 120px;
+    max-width: 400px;
+    background: #fff;
+    padding: 40px;
+    border: 2px solid var(--primary);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 80px;
+  }
+  .login-container h2 {
+    text-align: center;
+    color: var(--secondary);
+    margin-bottom: 20px;
+  }
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  .login-form input {
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+  .login-form input:focus {
+    border-color: var(--primary);
+    outline: none;
+  }
+  .login-form button {
+    padding: 12px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  .login-form button:hover {
+    background: var(--secondary);
+  }
+  .login-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9em;
+    color: #666;
+  }
+  .login-footer a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .login-footer a:hover {
+    text-decoration: underline;
+  }
+</style>
+{% endblock %} {% block content %}
 <div class="login-container">
   <h2>Вход</h2>
-
-  {% if error %}
-  <div class="alert alert-error">{{ error }}</div>
-  {% endif %}
 
   <form class="login-form" method="post" action="/login">
     <input
@@ -33,7 +77,8 @@ block content %}
     <button type="submit">Войти</button>
   </form>
   <div class="login-footer">
-    Нет аккаунта? <a href="/register">Зарегистрируйтесь</a>
+    Нет аккаунта?
+    <a href="/register">Зарегистрируйтесь</a>
   </div>
 </div>
 {% endblock %}

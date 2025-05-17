@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.auth_utils import get_current_user, get_db
 from app.password_utils import get_password_hash, verify_password
 from app.models import User
-from app.templates import templates
+from app.templates import templates, render_error_page
 import app.database as database
 import logging
 
@@ -35,23 +35,20 @@ def index_page(request: Request):
                 logger.error(f"Ошибка при получении пользователя: {e}")
                 # Если ошибка с БД, очищаем сессию, чтобы пользователь не был "заперт"
                 request.session.clear()
+                return render_error_page(
+                    request=request,
+                    error_message="Ошибка при получении данных пользователя",
+                    exception=e
+                )
 
         # Иначе отображаем публичную страницу
         return templates.TemplateResponse("index.html", {"request": request})
     except Exception as e:
         logger.error(f"Ошибка при отображении главной страницы: {e}")
-        # Возвращаем простой HTML в случае ошибки
-        return HTMLResponse(
-            content=f"""
-        <html>
-            <head><title>New Level - Сервис изучения английского</title></head>
-            <body>
-                <h1>Добро пожаловать в New Level!</h1>
-                <p>Наш сервис временно работает в ограниченном режиме.</p>
-                <p><a href="/login">Войти</a> | <a href="/register">Регистрация</a></p>
-            </body>
-        </html>
-        """
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке главной страницы",
+            exception=e
         )
 
 
@@ -86,8 +83,10 @@ def show_profile(
         )
     except Exception as e:
         logger.error(f"Ошибка при отображении профиля: {e}")
-        return HTMLResponse(
-            content="<h1>Ошибка при загрузке профиля</h1><p>Попробуйте позже</p>"
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке профиля пользователя",
+            exception=e
         )
 
 
@@ -100,34 +99,28 @@ def update_profile(
     email: str = Form(...),
     password: str = Form(None),
 ):
-    """
-    Обновляет профиль пользователя.
-    Требует аутентификацию.
-    """
-    errors = []
-
-    # Если email изменился, проверить что новый email не занят другим пользователем
-    if email != current_user.email:
-        existing = db.query(User).filter(User.email == email).first()
-        if existing:
-            errors.append("Этот email уже используется другим аккаунтом")
-
-    # Если введён новый пароль (не пустой) - проверяем требования
-    new_password_hash = None
-    if password:
-        if len(password) < 4:
-            errors.append("Новый пароль слишком короткий (минимум 4 символа)")
-        else:
-            new_password_hash = get_password_hash(password)
-
-    if errors:
-        # Вернуть страницу профиля с сообщениями об ошибках
-        return templates.TemplateResponse(
-            "profile.html", {"request": request, "user": current_user, "errors": errors}
-        )
-
     try:
-        # Обновляем данные пользователя
+        # If email changed, check if new email is already taken
+        if email != current_user.email:
+            existing = db.query(User).filter(User.email == email).first()
+            if existing:
+                return RedirectResponse(
+                    url="/profile?error=This email is already used by another account",
+                    status_code=303,
+                )
+
+        # If new password entered, check requirements
+        new_password_hash = None
+        if password:
+            if len(password) < 4:
+                return RedirectResponse(
+                    url="/profile?error=New password too short (minimum 4 characters)",
+                    status_code=303,
+                )
+            else:
+                new_password_hash = get_password_hash(password)
+
+        # Update user data
         current_user.name = name
         if email != current_user.email:
             current_user.email = email
@@ -135,11 +128,16 @@ def update_profile(
             current_user.password_hash = new_password_hash
 
         db.commit()
-        # Перенаправляем обратно на страницу профиля
-        return RedirectResponse(url="/profile", status_code=303)
+
+        # Redirect back to profile with success message
+        return RedirectResponse(
+            url="/profile?success=Profile updated successfully", status_code=303
+        )
     except Exception as e:
-        logger.error(f"Ошибка при обновлении профиля: {e}")
-        errors.append("Ошибка при сохранении данных. Попробуйте позже.")
-        return templates.TemplateResponse(
-            "profile.html", {"request": request, "user": current_user, "errors": errors}
+        logger.error(f"Error updating profile: {e}")
+        db.rollback()
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при обновлении профиля пользователя",
+            exception=e
         )

@@ -43,3 +43,23 @@ except Exception as e:
         templates_dir.mkdir(exist_ok=True)
     templates = Jinja2Templates(directory=str(templates_dir))
     templates_path = str(templates_dir)
+
+
+def render_error_page(request, error_message, exception=None, status_code=500):
+    """
+    Отображает страницу ошибки с использованием шаблона 500.html
+
+    Args:
+        request: объект запроса FastAPI
+        error_message: сообщение об ошибке для пользователя
+        exception: объект исключения для логирования (опционально)
+        status_code: HTTP-код ответа (по умолчанию 500)
+    """
+    if exception:
+        logger.error(f"{error_message}: {exception}")
+
+    return templates.TemplateResponse(
+        "error/index.html",
+        {"request": request, "error_message": error_message},
+        status_code=status_code,
+    )

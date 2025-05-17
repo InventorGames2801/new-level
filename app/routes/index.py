@@ -6,7 +6,7 @@ from typing import Optional
 from app.database import get_db
 from app.models import User
 from app.auth_utils import get_optional_user
-from app.templates import templates
+from app.templates import templates, render_error_page
 import app.database as crud
 import logging
 
@@ -54,6 +54,11 @@ def index_page(request: Request, db: Session = Depends(get_db)):
                 logger.error(f"Ошибка при получении пользователя: {e}")
                 # Если ошибка с БД, очищаем сессию, чтобы пользователь не был "заперт"
                 request.session.clear()
+                return render_error_page(
+                    request=request,
+                    error_message="Ошибка при получении данных пользователя",
+                    exception=e
+                )
 
         # Иначе отображаем публичную страницу
         return templates.TemplateResponse(
@@ -61,18 +66,10 @@ def index_page(request: Request, db: Session = Depends(get_db)):
         )
     except Exception as e:
         logger.error(f"Ошибка при отображении главной страницы: {e}")
-        # Возвращаем простой HTML в случае ошибки
-        return HTMLResponse(
-            content=f"""
-        <html>
-            <head><title>New Level - Сервис изучения английского</title></head>
-            <body>
-                <h1>Добро пожаловать в New Level!</h1>
-                <p>Наш сервис временно работает в ограниченном режиме.</p>
-                <p><a href="/login">Войти</a> | <a href="/register">Регистрация</a></p>
-            </body>
-        </html>
-        """
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке главной страницы",
+            exception=e
         )
 
 
@@ -81,11 +78,19 @@ def about_page(request: Request, user: Optional[User] = Depends(get_optional_use
     """
     Страница о проекте
     """
-    authenticated = user is not None
+    try:
+        authenticated = user is not None
 
-    return templates.TemplateResponse(
-        "about.html", {"request": request, "authenticated": authenticated, "user": user}
-    )
+        return templates.TemplateResponse(
+            "about.html", {"request": request, "authenticated": authenticated, "user": user}
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при отображении страницы о проекте: {e}")
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке страницы о проекте",
+            exception=e
+        )
 
 
 @router.get("/training", response_class=HTMLResponse)
@@ -93,9 +98,17 @@ def training_page(request: Request, user: Optional[User] = Depends(get_optional_
     """
     Страница о методике обучения
     """
-    authenticated = user is not None
+    try:
+        authenticated = user is not None
 
-    return templates.TemplateResponse(
-        "training.html",
-        {"request": request, "authenticated": authenticated, "user": user},
-    )
+        return templates.TemplateResponse(
+            "training.html",
+            {"request": request, "authenticated": authenticated, "user": user},
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при отображении страницы обучения: {e}")
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке страницы с информацией об обучении",
+            exception=e
+        )

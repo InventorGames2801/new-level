@@ -4,16 +4,25 @@ from sqlalchemy.orm import Session
 from app.models import User
 from app.auth_utils import get_db
 from app.password_utils import get_password_hash, verify_password
-from app.templates import templates
+from app.templates import templates, render_error_page
 from datetime import datetime, timezone
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/login", response_class=HTMLResponse)
 def show_login(request: Request):
-    # Отображаем страницу с формой логина
-    return templates.TemplateResponse("login.html", {"request": request})
+    try:
+        # Отображаем страницу с формой логина
+        return templates.TemplateResponse("login.html", {"request": request})
+    except Exception as e:
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке страницы входа",
+            exception=e
+        )
 
 
 @router.post("/login")
@@ -23,30 +32,35 @@ def process_login(
     email: str = Form(...),
     password: str = Form(...),
 ):
-    # Ищем пользователя по email
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not verify_password(password, user.password_hash):
-        # Неверный логин или пароль: возвращаем страницу логина с сообщением об ошибке
-        error_msg = "Неправильный email или пароль"
-        return templates.TemplateResponse(
-            "login.html", {"request": request, "error": error_msg, "email": email}
+    try:
+        # Find user by email
+        user = db.query(User).filter(User.email == email).first()
+        if not user or not verify_password(password, user.password_hash):
+            # Invalid login - return login page with error
+            return RedirectResponse(
+                url="/login?error=Invalid email or password", status_code=303
+            )
+
+        # Update last_login when successful
+        user.last_login = datetime.now(timezone.utc)
+        db.commit()
+
+        # Save user_id and role in session
+        request.session["user_id"] = user.id
+        request.session["role"] = user.role
+
+        # Redirect to home page after login with success message
+        return RedirectResponse(
+            url="/?success=You have successfully logged in", status_code=303
         )
-
-    # Добавляем: обновляем last_login при успешном входе
-    user.last_login = datetime.now(timezone.utc)
-    db.commit()  # Сохраняем изменения в БД
-
-    # Успешный вход: сохраняем user_id и роль в сессию
-    request.session["user_id"] = user.id
-    request.session["role"] = user.role
-    # Редирект на главную страницу после входа
-    return RedirectResponse(url="/", status_code=303)
-
-
-@router.get("/register", response_class=HTMLResponse)
-def show_register(request: Request):
-    # Отображаем страницу с формой регистрации
-    return templates.TemplateResponse("register.html", {"request": request})
+    except Exception as e:
+        logger.error(f"Ошибка при обработке входа: {e}")
+        db.rollback()
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при попытке входа в систему",
+            exception=e
+        )
 
 
 @router.post("/register")
@@ -57,34 +71,68 @@ def process_register(
     email: str = Form(...),
     password: str = Form(...),
 ):
-    errors = []
-    # Проверка email
-    if db.query(User).filter(User.email == email).first():
-        errors.append("Email уже зарегистрирован")
-    # Примитивная проверка пароля (например, длина не меньше 4)
-    if len(password) < 4:
-        errors.append("Пароль слишком короткий (минимум 4 символа)")
-    if errors:
-        # Есть ошибки - возвращаем форму с сообщениями
-        return templates.TemplateResponse(
-            "register.html",
-            {"request": request, "errors": errors, "name": name, "email": email},
+    try:
+        # Check email
+        if db.query(User).filter(User.email == email).first():
+            return RedirectResponse(
+                url="/register?error=Email already registered", status_code=303
+            )
+
+        # Basic password check
+        if len(password) < 4:
+            return RedirectResponse(
+                url="/register?error=Password too short (minimum 4 characters)",
+                status_code=303,
+            )
+
+        # Create new user
+        hashed_pw = get_password_hash(password)
+        new_user = User(name=name, email=email, password_hash=hashed_pw)
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+
+        # Auto-login - save to session
+        request.session["user_id"] = new_user.id
+        request.session["role"] = new_user.role
+
+        # Redirect to home with success message
+        return RedirectResponse(
+            url="/?success=Registration successful! Welcome to New Level", status_code=303
         )
-    # Создание нового пользователя
-    hashed_pw = get_password_hash(password)
-    new_user = User(name=name, email=email, password_hash=hashed_pw)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)  # получаем сгенерированный id
-    # Автовход нового пользователя: сохраняем в сессию
-    request.session["user_id"] = new_user.id
-    request.session["role"] = new_user.role
-    # Редирект на главную страницу вошедшего пользователя
-    return RedirectResponse(url="/", status_code=303)
+    except Exception as e:
+        logger.error(f"Ошибка при регистрации: {e}")
+        db.rollback()
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при регистрации пользователя",
+            exception=e
+        )
 
 
 @router.get("/logout")
 def logout(request: Request):
-    # Очистка сессии и перенаправление на страницу логина
-    request.session.clear()
-    return RedirectResponse(url="/", status_code=302)
+    try:
+        # Очистка сессии и перенаправление на страницу логина
+        request.session.clear()
+        return RedirectResponse(url="/", status_code=302)
+    except Exception as e:
+        logger.error(f"Ошибка при выходе из системы: {e}")
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при выходе из системы",
+            exception=e
+        )
+
+
+@router.get("/register", response_class=HTMLResponse)
+def show_register(request: Request):
+    try:
+        # Отображаем страницу с формой регистрации
+        return templates.TemplateResponse("register.html", {"request": request})
+    except Exception as e:
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке страницы регистрации",
+            exception=e
+        )
