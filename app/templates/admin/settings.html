@@ -341,6 +341,15 @@
         <p>Настройки опыта, уровней и базовой игровой механики</p>
         
         <div class="settings-form">
+          <div class="setting-item">
+            <div class="setting-name">
+              Дневной лимит опыта
+              <div class="setting-description">Максимальное количество опыта, которое игрок может получить за один день (0 = без ограничений)</div>
+            </div>
+            <div class="setting-value">
+              <input type="number" name="setting_daily_experience_limit" value="{{ settings|selectattr('key', 'equalto', 'daily_experience_limit')|map(attribute='value')|first|default('200') }}" class="form-control" min="0" max="1000">
+            </div>
+          </div>
           <!-- Настройка: очки за ответ -->
           <div class="setting-item">
             <div class="setting-name">

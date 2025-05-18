@@ -24,16 +24,16 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     title = "Ошибка"
 
     if exc.status_code == 401:
-        template = "errors/401.html"
+        template = "error/401.html"
         title = "Требуется авторизация"
     elif exc.status_code == 403:
-        template = "errors/403.html"
+        template = "error/403.html"
         title = "Доступ запрещен"
     elif exc.status_code == 404:
-        template = "errors/404.html"
+        template = "error/404.html"
         title = "Страница не найдена"
     else:
-        template = "errors/500.html"
+        template = "error/500.html"
         title = "Ошибка сервера"
 
     # Если пользователь запрашивает через popup, перенаправляем с ошибкой в URL
@@ -60,9 +60,7 @@ async def unauthorized_exception_handler(request: Request, exc: HTTPException):
     logger.warning(f"Unauthorized access attempt: {request.url.path}")
 
     return HTMLResponse(
-        content=templates.TemplateResponse(
-            "errors/401.html", {"request": request}
-        ).body,
+        content=templates.TemplateResponse("error/401.html", {"request": request}).body,
         status_code=status.HTTP_401_UNAUTHORIZED,
     )
 
@@ -74,9 +72,7 @@ async def not_found_exception_handler(request: Request, exc: HTTPException):
     logger.info(f"Not found: {request.url.path}")
 
     return HTMLResponse(
-        content=templates.TemplateResponse(
-            "errors/404.html", {"request": request}
-        ).body,
+        content=templates.TemplateResponse("error/404.html", {"request": request}).body,
         status_code=status.HTTP_404_NOT_FOUND,
     )
 
@@ -89,8 +85,6 @@ async def generic_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
 
     return HTMLResponse(
-        content=templates.TemplateResponse(
-            "errors/500.html", {"request": request}
-        ).body,
+        content=templates.TemplateResponse("error/500.html", {"request": request}).body,
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )

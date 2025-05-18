@@ -162,36 +162,6 @@ def update_user_last_login(db: Session, user_id: int) -> None:
         db.commit()
 
 
-def add_user_experience(
-    db: Session, user_id: int, exp_points: int
-) -> Tuple[User, bool]:
-    """
-    Добавление очков опыта пользователю и проверка на повышение уровня.
-    Возвращает пользователя и флаг, указывающий было ли повышение уровня.
-    """
-    user = get_user(db, user_id)
-    if not user:
-        return None, False
-
-    # Получаем настройки для повышения уровня
-    exp_for_level_up = get_game_setting_int(db, "points_for_level_up", 100)
-
-    # Добавляем опыт и обновляем общее количество очков
-    user.experience += exp_points
-    user.total_points += exp_points
-
-    # Проверяем, достаточно ли опыта для повышения уровня
-    level_up = False
-    while user.experience >= exp_for_level_up:
-        user.experience -= exp_for_level_up
-        user.level += 1
-        level_up = True
-
-    db.commit()
-    db.refresh(user)
-    return user, level_up
-
-
 def get_user_stats(db: Session, user_id: int) -> Dict[str, Any]:
     """Получение статистики игр пользователя."""
     user = get_user(db, user_id)
@@ -287,22 +257,32 @@ def get_random_words(
     difficulty: Optional[str] = None,
     excluded_ids: List[int] = None,
 ) -> List[Word]:
-    """Gets random words for a game, excluding those used recently"""
+    """Gets random words for a game, always returning requested count of words"""
 
     query = db.query(Word)
 
     if difficulty:
         query = query.filter(Word.difficulty == difficulty)
 
+    # Применяем исключения только если после этого останутся слова
     if excluded_ids:
-        query = query.filter(~Word.id.in_(excluded_ids))
+        # Сначала проверим, сколько всего подходящих слов
+        total_words = query.count()
+
+        # Проверим, сколько слов останется после исключения
+        remaining_words = query.filter(~Word.id.in_(excluded_ids)).count()
+
+        # Применяем фильтр только если останется достаточно слов
+        if remaining_words >= count:
+            query = query.filter(~Word.id.in_(excluded_ids))
 
     available_words = query.all()
 
+    # Если доступно слишком мало слов - берем все что есть
     if len(available_words) <= count:
-        return available_words
-
-    selected_words = random.sample(available_words, count)
+        selected_words = available_words
+    else:
+        selected_words = random.sample(available_words, count)
 
     for word in selected_words:
         word.times_shown += 1
@@ -310,6 +290,65 @@ def get_random_words(
 
     db.commit()
     return selected_words
+
+
+def add_user_experience(
+    db: Session, user_id: int, exp_points: int
+) -> Tuple[User, bool, bool]:
+    """
+    Добавление очков опыта пользователю и проверка на повышение уровня.
+    Возвращает кортеж: (пользователь, был_ли_повышен_уровень, достигнут_ли_дневной_лимит)
+    """
+    user = get_user(db, user_id)
+    if not user:
+        return None, False, False
+
+    # Получаем настройки
+    daily_exp_limit = get_game_setting_int(db, "daily_experience_limit", 200)
+    exp_for_level_up = get_game_setting_int(db, "points_for_level_up", 100)
+
+    # Проверяем, нужно ли сбросить счетчик дневного опыта
+    today = datetime.now(timezone.utc).date()
+    if user.daily_experience_updated_at:
+        last_update_date = user.daily_experience_updated_at.date()
+        if last_update_date < today:
+            # Новый день - сбрасываем счетчик
+            user.daily_experience = 0
+
+    # Проверяем, достигнут ли дневной лимит
+    daily_limit_reached = False
+    if daily_exp_limit > 0:  # Если лимит установлен (0 = без ограничений)
+        # Сколько опыта можно добавить в пределах лимита
+        available_exp = daily_exp_limit - user.daily_experience
+        if available_exp <= 0:
+            # Лимит уже достигнут
+            daily_limit_reached = True
+            exp_to_add = 0
+        else:
+            # Можно добавить в пределах лимита
+            exp_to_add = min(exp_points, available_exp)
+            user.daily_experience += exp_to_add
+    else:
+        # Нет лимита
+        exp_to_add = exp_points
+
+    # Обновляем время последнего обновления
+    user.daily_experience_updated_at = datetime.now(timezone.utc)
+
+    # Добавляем опыт и обновляем общее количество очков
+    user.experience += exp_to_add
+    user.total_points += exp_to_add
+
+    # Проверяем, достаточно ли опыта для повышения уровня
+    level_up = False
+    while user.experience >= exp_for_level_up:
+        user.experience -= exp_for_level_up
+        user.level += 1
+        level_up = True
+
+    db.commit()
+    db.refresh(user)
+    return user, level_up, daily_limit_reached
 
 
 def update_word_stats(db: Session, word_id: int, correct: bool) -> None:

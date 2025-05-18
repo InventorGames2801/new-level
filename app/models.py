@@ -32,6 +32,10 @@ class User(Base):
     level: Mapped[int] = mapped_column(Integer, default=1)
     experience: Mapped[int] = mapped_column(Integer, default=0)
     total_points: Mapped[int] = mapped_column(Integer, default=0)
+    daily_experience: Mapped[int] = mapped_column(Integer, default=0)
+    daily_experience_updated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
 
     # Метаданные
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

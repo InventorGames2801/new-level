@@ -473,6 +473,7 @@ endblock %} {% block additional_styles %}
   let score = 0;
   let correctAnswers = 0;
   let totalQuestions = 0;
+  let expForLevelUp = 100; // Можно получить из настроек
 
   // DOM-элементы
   const gameTabs = document.querySelectorAll(".game-tab");
@@ -528,83 +529,49 @@ endblock %} {% block additional_styles %}
     });
 
     // Обработчики для проверки ответов
-    scrambleCheckBtn.addEventListener("click", () => {
-      checkScrambleAnswer();
-    });
+    if (scrambleCheckBtn) {
+      scrambleCheckBtn.addEventListener("click", () => {
+        checkScrambleAnswer();
+      });
+    }
 
-    typingCheckBtn.addEventListener("click", () => {
-      checkTypingAnswer();
-    });
+    if (typingCheckBtn) {
+      typingCheckBtn.addEventListener("click", () => {
+        checkTypingAnswer();
+      });
+    }
 
     // Обработка нажатия Enter в полях ввода
-    scrambleInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        checkScrambleAnswer();
-      }
-    });
+    if (scrambleInput) {
+      scrambleInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          checkScrambleAnswer();
+        }
+      });
+    }
 
-    typingInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        checkTypingAnswer();
-      }
-    });
+    if (typingInput) {
+      typingInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          checkTypingAnswer();
+        }
+      });
+    }
 
     // Обработчик для кнопки подсказки
-    hintBtn.addEventListener("click", () => {
-      useHint();
-    });
+    if (hintBtn) {
+      hintBtn.addEventListener("click", () => {
+        useHint();
+      });
+    }
 
     // Обработчик для кнопки пропуска
-    skipBtn.addEventListener("click", () => {
-      skipQuestion();
-    });
-  });
-
-  // Загрузка слов для игры
-  async function loadWordsForGame(gameType) {
-    try {
-      const count = gameType === "matching" ? 3 : 5;
-      console.log(`Fetching ${count} words for game type: ${gameType}`);
-
-      const response = await fetch(`/api/words/${gameType}?count=${count}`);
-
-      if (!response.ok) {
-        // Log detailed error info
-        const errorText = await response.text();
-        console.error(`Error response (${response.status}):`, errorText);
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log(`Successfully loaded ${data.length} words`);
-
-      return data;
-    } catch (error) {
-      console.error("Error loading words:", error);
-      return [];
+    if (skipBtn) {
+      skipBtn.addEventListener("click", () => {
+        skipQuestion();
+      });
     }
-  }
-
-  // Исправление в файле app/templates/game.html
-
-  async function loadGame(gameType) {
-    // Сбрасываем UI
-    feedbackElement.textContent = "";
-    feedbackElement.className = "feedback";
-    nextButton.style.display = "none";
-    hintBtn.style.display = "block";
-    skipBtn.style.display = "block";
-
-    // Запускаем новую игровую сессию
-    await startGameSession(gameType);
-
-    // Загружаем слова
-    currentWords = await loadWordsForGame(gameType); // Добавляем присваивание!
-    currentWordIndex = 0; // Сбрасываем индекс
-
-    // Показываем первый вопрос
-    showCurrentQuestion();
-  }
+  });
 
   async function startGameSession(gameType) {
     try {
@@ -635,75 +602,156 @@ endblock %} {% block additional_styles %}
     }
   }
 
+  // Загрузка слов для игры
+  async function loadWordsForGame(gameType) {
+    try {
+      const count = gameType === "matching" ? 3 : 5;
+      console.log(`Fetching ${count} words for game type: ${gameType}`);
+
+      const response = await fetch(`/api/words/${gameType}?count=${count}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Error response (${response.status}):`, errorText);
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`Successfully loaded ${data.length} words`);
+
+      return data;
+    } catch (error) {
+      console.error("Error loading words:", error);
+      return [];
+    }
+  }
+
+  // Загрузка игры
+  async function loadGame(gameType) {
+    // Сбрасываем UI
+    if (feedbackElement) feedbackElement.textContent = "";
+    if (feedbackElement) feedbackElement.className = "feedback";
+    if (nextButton) nextButton.style.display = "none";
+    if (hintBtn) hintBtn.style.display = "block";
+    if (skipBtn) skipBtn.style.display = "block";
+
+    // Запускаем новую игровую сессию
+    await startGameSession(gameType);
+
+    // Загружаем слова
+    currentWords = await loadWordsForGame(gameType);
+    currentWordIndex = 0;
+
+    // Показываем первый вопрос
+    showCurrentQuestion();
+  }
+
   // Показать текущий вопрос
   function showCurrentQuestion() {
-    if (
-      !currentWords ||
-      currentWords.length === 0 ||
-      currentWordIndex >= currentWords.length
-    ) {
+    // Проверяем, есть ли слова
+    if (!currentWords || currentWords.length === 0) {
       console.error("Нет доступных слов для отображения");
+      loadGameWords(); // Пытаемся загрузить новые слова
+      return;
+    }
+
+    // Если текущий индекс выходит за пределы массива, загружаем новые слова
+    if (currentWordIndex >= currentWords.length) {
+      loadGameWords();
       return;
     }
 
     // Очищаем поля ввода и сообщения
-    scrambleInput.value = "";
-    typingInput.value = "";
-    feedbackElement.textContent = "";
-    feedbackElement.className = "feedback";
-    nextButton.style.display = "none";
+    if (scrambleInput) scrambleInput.value = "";
+    if (typingInput) typingInput.value = "";
+    if (feedbackElement) feedbackElement.textContent = "";
+    if (feedbackElement) feedbackElement.className = "feedback";
+    if (nextButton) nextButton.style.display = "none";
 
     // Разблокируем поля ввода
-    scrambleInput.disabled = false;
-    scrambleCheckBtn.disabled = false;
-    typingInput.disabled = false;
-    typingCheckBtn.disabled = false;
+    if (scrambleInput) scrambleInput.disabled = false;
+    if (scrambleCheckBtn) scrambleCheckBtn.disabled = false;
+    if (typingInput) typingInput.disabled = false;
+    if (typingCheckBtn) typingCheckBtn.disabled = false;
 
     // Показываем соответствующий вопрос в зависимости от типа игры
-    if (currentGame === "scramble") {
+    if (currentGame === "scramble" && scrambledWordElement) {
       const word = currentWords[currentWordIndex];
       scrambledWordElement.textContent = word.scrambled;
     } else if (currentGame === "matching") {
       setupMatchingGame();
-    } else if (currentGame === "typing") {
+    } else if (currentGame === "typing" && typingQuestion) {
       const word = currentWords[currentWordIndex];
       typingQuestion.textContent = word.description;
     }
 
     // Показываем кнопки
-    hintBtn.style.display = "block";
-    skipBtn.style.display = "block";
+    if (hintBtn) hintBtn.style.display = "block";
+    if (skipBtn) skipBtn.style.display = "block";
+  }
+
+  // Функция для загрузки новых слов
+  async function loadGameWords() {
+    try {
+      // Показываем индикатор загрузки
+      if (feedbackElement) {
+        feedbackElement.textContent = "Загрузка новых слов...";
+      }
+
+      // Загружаем новые слова для текущей игры
+      const newWords = await loadWordsForGame(currentGame);
+
+      // Обновляем массив слов и сбрасываем индекс
+      currentWords = newWords;
+      currentWordIndex = 0;
+
+      // Показываем новый вопрос
+      showCurrentQuestion();
+    } catch (error) {
+      console.error("Ошибка при загрузке новых слов:", error);
+      if (feedbackElement) {
+        feedbackElement.textContent =
+          "Ошибка при загрузке слов. Попробуйте еще раз.";
+        feedbackElement.className = "feedback incorrect";
+      }
+    }
   }
 
   // Обработка ответа для игры "Анаграммы"
   function checkScrambleAnswer() {
-    if (scrambleInput.disabled) return; // Предотвращаем повторную проверку
+    if (!scrambleInput || scrambleInput.disabled) return; // Предотвращаем повторную проверку
 
     const word = currentWords[currentWordIndex];
     const userAnswer = scrambleInput.value.trim().toLowerCase();
 
-    checkAnswer(userAnswer, word.id);
+    // Валидация на сервере
+    checkAnswer(userAnswer, word.id, "scramble");
   }
 
   // Обработка ответа для игры "Написание слов"
   function checkTypingAnswer() {
-    if (typingInput.disabled) return; // Предотвращаем повторную проверку
+    if (!typingInput || typingInput.disabled) return; // Предотвращаем повторную проверку
 
     const word = currentWords[currentWordIndex];
     const userAnswer = typingInput.value.trim().toLowerCase();
 
-    checkAnswer(userAnswer, word.id);
+    // Валидация на сервере
+    checkAnswer(userAnswer, word.id, "typing");
   }
 
   // Общая функция проверки ответа
-  async function checkAnswer(userAnswer, wordId) {
+  async function checkAnswer(userAnswer, wordId, gameType) {
     try {
       const response = await fetch("/api/word/check", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ word_id: wordId, answer: userAnswer }),
+        body: JSON.stringify({
+          word_id: wordId,
+          answer: userAnswer,
+          game_type: gameType,
+        }),
       });
 
       const data = await response.json();
@@ -717,8 +765,10 @@ endblock %} {% block additional_styles %}
         // Начисляем очки
         score += 10;
 
-        feedbackElement.textContent = `Правильно! +10 очков`;
-        feedbackElement.className = "feedback correct";
+        if (feedbackElement) {
+          feedbackElement.textContent = `Правильно! +10 очков`;
+          feedbackElement.className = "feedback correct";
+        }
 
         // Анимация награды
         showRewardAnimation();
@@ -727,310 +777,43 @@ endblock %} {% block additional_styles %}
         disableInputs();
 
         // Показываем кнопку следующего вопроса
-        nextButton.style.display = "block";
+        if (nextButton) nextButton.style.display = "block";
 
         // Скрываем кнопки
-        hintBtn.style.display = "none";
-        skipBtn.style.display = "none";
+        if (hintBtn) hintBtn.style.display = "none";
+        if (skipBtn) skipBtn.style.display = "none";
+
+        // Отправляем обновленные результаты
+        updateGameProgress();
       } else {
         // Неправильный ответ
         totalQuestions++;
 
-        // Получаем правильный ответ
-        const word = currentWords[currentWordIndex];
-        let correctAnswer = "";
-
-        if (currentGame === "scramble" || currentGame === "typing") {
-          correctAnswer = word.text;
-        } else if (currentGame === "matching") {
-          correctAnswer = word.translation;
+        if (feedbackElement) {
+          feedbackElement.textContent = `Неверно. Попробуйте еще раз!`;
+          feedbackElement.className = "feedback incorrect";
         }
-
-        feedbackElement.textContent = `Неверно. Правильный ответ: ${correctAnswer}`;
-        feedbackElement.className = "feedback incorrect";
 
         // Блокируем поля ввода
         disableInputs();
 
-        // Сразу переходим к следующему вопросу
-        setTimeout(() => {
-          nextQuestion();
-        }, 2000);
+        // Показываем кнопку следующего вопроса
+        if (nextButton) nextButton.style.display = "block";
+
+        // Скрываем кнопки
+        if (hintBtn) hintBtn.style.display = "none";
+        if (skipBtn) skipBtn.style.display = "none";
+
+        // Отправляем обновленные результаты
+        updateGameProgress();
       }
     } catch (error) {
       console.error("Ошибка при проверке ответа:", error);
     }
   }
 
-  // Использование подсказки
-  async function useHint() {
-    const word = currentWords[currentWordIndex];
-
-    if (currentGame === "scramble") {
-      // Показываем первую половину слова
-      const halfLength = Math.ceil(word.text.length / 2);
-      const hint = word.text.substring(0, halfLength);
-      scrambleInput.value = hint;
-      scrambleInput.focus();
-    } else if (currentGame === "typing") {
-      // Показываем первую половину слова
-      const halfLength = Math.ceil(word.text.length / 2);
-      const hint = word.text.substring(0, halfLength);
-      typingInput.value = hint;
-      typingInput.focus();
-    } else if (currentGame === "matching") {
-      // Для сопоставления автоматически устанавливаем одну правильную пару
-      // Эта логика реализована в функции setupMatchingHint
-      setupMatchingHint();
-    }
-
-    // Скрываем кнопку подсказки после использования
-    hintBtn.style.display = "none";
-  }
-
-  // Функция для отображения подсказки в режиме сопоставления
-  function setupMatchingHint() {
-    // Находим первую пустую зону сопоставления
-    const emptyDropZones = document.querySelectorAll(".word-drop:empty");
-    if (emptyDropZones.length > 0) {
-      const firstEmptyZone = emptyDropZones[0];
-      const dropId = firstEmptyZone.id;
-      const index = parseInt(dropId.replace("drop", "")) - 1;
-
-      // Находим соответствующее русское слово
-      const word = currentWords[index];
-      const translationText = word.translation;
-
-      // Находим элемент с этим переводом в банке слов
-      const items = document.querySelectorAll(
-        `[data-answer="${translationText}"]`
-      );
-      if (items.length > 0) {
-        const item = items[0].cloneNode(true);
-        firstEmptyZone.innerHTML = "";
-        firstEmptyZone.appendChild(item);
-
-        // Убираем возможность перетаскивания
-        item.draggable = false;
-
-        // Удаляем оригинал из банка слов
-        items[0].remove();
-      }
-    }
-  }
-
-  // Пропуск вопроса
-  function skipQuestion() {
-    // Увеличиваем счетчик вопросов
-    totalQuestions++;
-
-    // Блокируем поля ввода
-    disableInputs();
-
-    // Сразу переходим к следующему вопросу
-    nextQuestion();
-  }
-
-  // Функция для блокировки полей ввода
-  function disableInputs() {
-    if (currentGame === "scramble") {
-      scrambleInput.disabled = true;
-      scrambleCheckBtn.disabled = true;
-    } else if (currentGame === "typing") {
-      typingInput.disabled = true;
-      typingCheckBtn.disabled = true;
-    } else if (currentGame === "matching") {
-      // Блокируем перетаскивание для режима сопоставления
-      document.querySelectorAll(".word-item").forEach((item) => {
-        item.draggable = false;
-      });
-    }
-
-    // Скрываем кнопки
-    skipBtn.style.display = "none";
-    hintBtn.style.display = "none";
-  }
-
-  // Настройка игры "Сопоставление"
-  function setupMatchingGame() {
-    const matchingPairsContainer = document.getElementById("matching-pairs");
-    const matchingWordBank = document.getElementById("matching-word-bank");
-
-    // Очищаем контейнеры
-    matchingPairsContainer.innerHTML = "";
-    matchingWordBank.innerHTML = "";
-
-    // Получаем слова для сопоставления (используем все загруженные слова)
-    const words = currentWords.slice(0, 3); // Используем только 3 пары
-
-    // Создаем пары английское слово - пустая зона для русского
-    words.forEach((word, index) => {
-      const pair = document.createElement("div");
-      pair.className = "word-pair";
-      pair.innerHTML = `
-      <div class="word-item">${word.text}</div>
-      <div class="word-drop" id="drop${
-        index + 1
-      }" ondrop="dropWord(event)" ondragover="allowDrop(event)"></div>
-    `;
-      matchingPairsContainer.appendChild(pair);
-    });
-
-    // Создаем русские слова для перетаскивания (перемешанные)
-    const translations = words.map((word) => word.translation);
-    shuffleArray(translations); // Перемешиваем массив
-
-    translations.forEach((translation) => {
-      const dragItem = document.createElement("div");
-      dragItem.className = "word-item";
-      dragItem.draggable = true;
-      dragItem.setAttribute("ondragstart", "dragWord(event)");
-      dragItem.setAttribute("data-answer", translation);
-      dragItem.textContent = translation;
-      matchingWordBank.appendChild(dragItem);
-    });
-
-    // Добавляем глобальные функции для работы с Drag and Drop
-    window.dragWord = function (event) {
-      event.dataTransfer.setData(
-        "text",
-        event.target.getAttribute("data-answer")
-      );
-      event.dataTransfer.setData("sourceId", event.target.id);
-    };
-
-    window.allowDrop = function (event) {
-      event.preventDefault();
-    };
-
-    window.dropWord = function (event) {
-      event.preventDefault();
-      const data = event.dataTransfer.getData("text");
-
-      // Если в зоне уже есть элемент, не добавляем новый
-      if (event.target.children.length > 0) return;
-
-      // Находим и клонируем перетаскиваемый элемент
-      const items = document.querySelectorAll(`[data-answer="${data}"]`);
-      if (items.length > 0) {
-        const item = items[0].cloneNode(true);
-        event.target.innerHTML = "";
-        event.target.appendChild(item);
-
-        // Убираем возможность перетаскивания
-        item.draggable = false;
-
-        // Удаляем оригинал из банка слов
-        items[0].remove();
-
-        // Проверяем, все ли пары сопоставлены
-        checkAllMatchesDone();
-      }
-    };
-  }
-
-  // Функция перемешивания массива
-  function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-  }
-
-  // Проверка, все ли пары в сопоставлении заполнены
-  function checkAllMatchesDone() {
-    const dropZones = document.querySelectorAll(".word-drop");
-    const allFilled = Array.from(dropZones).every(
-      (zone) => zone.children.length > 0
-    );
-
-    if (allFilled) {
-      // Если все зоны заполнены, проверяем правильность сопоставления
-      validateMatching();
-    }
-  }
-
-  // Валидация результата сопоставления
-  function validateMatching() {
-    // Каждая зона должна содержать перевод соответствующего слова
-    const pairs = document.querySelectorAll(".word-pair");
-    let allCorrect = true;
-    let foundIncorrect = false;
-
-    pairs.forEach((pair, index) => {
-      const englishWord = pair.querySelector(
-        ".word-item:first-child"
-      ).textContent;
-      const translationContainer = pair.querySelector(".word-drop");
-      const translationElement =
-        translationContainer.querySelector(".word-item");
-
-      if (!translationElement) return;
-
-      const translation = translationElement.textContent;
-      const correctWord = currentWords[index];
-
-      // Проверяем, правильно ли сопоставлено
-      if (
-        correctWord.text === englishWord &&
-        correctWord.translation === translation
-      ) {
-        translationContainer.classList.add("correct-match");
-      } else {
-        translationContainer.classList.add("incorrect-match");
-        allCorrect = false;
-        foundIncorrect = true;
-      }
-    });
-
-    // Если все пары сопоставлены правильно
-    if (allCorrect) {
-      // Правильный ответ, начисляем очки и показываем следующий вопрос
-      correctAnswers++;
-      totalQuestions++;
-      score += 10;
-
-      feedbackElement.textContent = `Правильно! +10 очков`;
-      feedbackElement.className = "feedback correct";
-
-      // Анимация награды
-      showRewardAnimation();
-
-      // Блокируем интерфейс
-      disableInputs();
-
-      // Показываем кнопку следующего вопроса
-      nextButton.style.display = "block";
-    } else if (foundIncorrect) {
-      // Если есть неправильные сопоставления
-      totalQuestions++;
-
-      feedbackElement.textContent = `Сопоставление выполнено неверно. Попробуйте еще раз!`;
-      feedbackElement.className = "feedback incorrect";
-
-      // Сбрасываем сопоставление
-      setTimeout(() => {
-        setupMatchingGame();
-      }, 2000);
-    }
-  }
-
-  // Переход к следующему вопросу
-  function nextQuestion() {
-    currentWordIndex++;
-
-    // Если слова закончились, завершаем игру
-    if (currentWordIndex >= currentWords.length) {
-      finishGame();
-    } else {
-      // Показываем следующий вопрос
-      showCurrentQuestion();
-    }
-  }
-
-  // Завершение игры и отправка результатов
-  async function finishGame() {
+  // Функция для обновления игрового прогресса
+  async function updateGameProgress() {
     try {
       const response = await fetch("/api/game/end", {
         method: "POST",
@@ -1047,16 +830,28 @@ endblock %} {% block additional_styles %}
 
       const data = await response.json();
 
-      // Обновляем UI с результатами
-      feedbackElement.textContent = `Игра завершена! Вы набрали ${score} очков. +${data.experience_gained} к опыту!`;
-      feedbackElement.className = "feedback";
+      // Обновляем отображение очков и прогресса, если не достигнут лимит
+      if (!data.daily_limit_reached) {
+        // Обновляем счетчик очков
+        if (pointsDisplay) {
+          pointsDisplay.textContent =
+            parseInt(pointsDisplay.textContent) + data.experience_gained;
+        }
 
-      // Скрываем кнопку "Следующий вопрос"
-      nextButton.style.display = "none";
-
-      // Обновляем отображение очков и прогресса
-      pointsDisplay.textContent =
-        parseInt(pointsDisplay.textContent) + data.experience_gained;
+        // Обновляем прогресс-бар
+        if (progressBar) {
+          const progressPercent = Math.min(
+            (data.total_experience / expForLevelUp) * 100,
+            100
+          );
+          progressBar.style.width = `${progressPercent}%`;
+        }
+      } else {
+        // Добавляем информацию о достижении лимита в сообщение обратной связи
+        if (feedbackElement) {
+          feedbackElement.textContent += ` Достигнут дневной лимит опыта (${data.daily_exp_current}/${data.daily_exp_limit})`;
+        }
+      }
 
       // Если произошло повышение уровня
       if (data.level_up) {
@@ -1066,19 +861,324 @@ endblock %} {% block additional_styles %}
           window.location.reload();
         }, 1500);
       }
-
-      // Загружаем новую игру через 3 секунды
-      setTimeout(() => {
-        loadGame(currentGame);
-      }, 3000);
     } catch (error) {
-      console.error("Ошибка при завершении игры:", error);
+      console.error("Ошибка при обновлении прогресса:", error);
     }
+  }
+
+  // Использование подсказки
+  function useHint() {
+    if (
+      !currentWords ||
+      currentWords.length === 0 ||
+      currentWordIndex >= currentWords.length
+    ) {
+      return;
+    }
+
+    const word = currentWords[currentWordIndex];
+
+    if (currentGame === "scramble" && feedbackElement) {
+      // Для анаграмм показываем описание в качестве подсказки
+      feedbackElement.textContent = `Подсказка: ${word.description}`;
+      feedbackElement.className = "feedback";
+    } else if (currentGame === "typing" && feedbackElement) {
+      // Для написания показываем первые несколько букв
+      const hintLength = Math.ceil(word.description.length / 3);
+      const hint = word.description.substring(0, hintLength) + "...";
+      feedbackElement.textContent = `Подсказка: ${hint}`;
+      feedbackElement.className = "feedback";
+    } else if (currentGame === "matching" && feedbackElement) {
+      // Для сопоставления показываем подсказку
+      feedbackElement.textContent =
+        "Подсказка: внимательно прочтите описания слов";
+      feedbackElement.className = "feedback";
+    }
+
+    // Скрываем кнопку подсказки после использования
+    if (hintBtn) hintBtn.style.display = "none";
+  }
+
+  // Пропуск вопроса
+  function skipQuestion() {
+    // Увеличиваем счетчик вопросов
+    totalQuestions++;
+
+    // Блокируем поля ввода
+    disableInputs();
+
+    // Сообщаем о пропуске
+    if (feedbackElement) {
+      feedbackElement.textContent = "Вопрос пропущен";
+      feedbackElement.className = "feedback";
+    }
+
+    // Показываем кнопку следующего вопроса
+    if (nextButton) nextButton.style.display = "block";
+
+    // Скрываем кнопки
+    if (hintBtn) hintBtn.style.display = "none";
+    if (skipBtn) skipBtn.style.display = "none";
+  }
+
+  // Функция для блокировки полей ввода
+  function disableInputs() {
+    if (currentGame === "scramble") {
+      if (scrambleInput) scrambleInput.disabled = true;
+      if (scrambleCheckBtn) scrambleCheckBtn.disabled = true;
+    } else if (currentGame === "typing") {
+      if (typingInput) typingInput.disabled = true;
+      if (typingCheckBtn) typingCheckBtn.disabled = true;
+    } else if (currentGame === "matching") {
+      // Блокируем перетаскивание для режима сопоставления
+      document.querySelectorAll(".word-item").forEach((item) => {
+        if (item) item.draggable = false;
+      });
+    }
+  }
+
+  // Переход к следующему вопросу
+  function nextQuestion() {
+    currentWordIndex++;
+
+    // Если слова закончились, загружаем новые
+    if (currentWordIndex >= currentWords.length) {
+      loadGameWords();
+    } else {
+      // Показываем следующий вопрос
+      showCurrentQuestion();
+    }
+  }
+
+  // Настройка игры "Сопоставление"
+  async function setupMatchingGame() {
+    const matchingPairsContainer = document.getElementById("matching-pairs");
+    const matchingWordBank = document.getElementById("matching-word-bank");
+
+    if (!matchingPairsContainer || !matchingWordBank) {
+      console.error("Не найдены контейнеры для игры Сопоставление");
+      return;
+    }
+
+    // Очищаем контейнеры
+    matchingPairsContainer.innerHTML = "";
+    matchingWordBank.innerHTML = "";
+
+    // Проверяем, есть ли слова
+    if (!currentWords || currentWords.length === 0) {
+      console.error("Нет слов для игры Сопоставление");
+      return;
+    }
+
+    // Получаем слова для сопоставления
+    const words = currentWords.slice(0, 3); // Используем только 3 пары
+
+    // Создаем пары английское слово - пустая зона для русского
+    words.forEach((word, index) => {
+      const pair = document.createElement("div");
+      pair.className = "word-pair";
+      pair.innerHTML = `
+      <div class="word-item">${word.text}</div>
+      <div class="word-drop" id="drop${index + 1}" data-word-id="${
+        word.id
+      }" ondrop="dropWord(event)" ondragover="allowDrop(event)"></div>
+    `;
+      matchingPairsContainer.appendChild(pair);
+    });
+
+    // Получаем варианты перевода с сервера
+    try {
+      const response = await fetch(
+        `/api/translation-options?count=${words.length}`
+      );
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const options = await response.json();
+
+      // Перемешиваем варианты
+      shuffleArray(options);
+
+      // Создаем элементы для перетаскивания
+      options.forEach((option) => {
+        const dragItem = document.createElement("div");
+        dragItem.className = "word-item";
+        dragItem.draggable = true;
+        dragItem.setAttribute("ondragstart", "dragWord(event)");
+        dragItem.setAttribute("data-answer", option.text);
+        dragItem.textContent = option.text;
+        matchingWordBank.appendChild(dragItem);
+      });
+
+      // Добавляем глобальные функции для работы с Drag and Drop
+      window.dragWord = function (event) {
+        event.dataTransfer.setData(
+          "text",
+          event.target.getAttribute("data-answer")
+        );
+        event.dataTransfer.setData("sourceId", event.target.id);
+      };
+
+      window.allowDrop = function (event) {
+        event.preventDefault();
+      };
+
+      window.dropWord = function (event) {
+        event.preventDefault();
+        const data = event.dataTransfer.getData("text");
+
+        // Если в зоне уже есть элемент, не добавляем новый
+        if (event.target.children.length > 0) return;
+
+        // Находим и клонируем перетаскиваемый элемент
+        const items = document.querySelectorAll(`[data-answer="${data}"]`);
+        if (items.length > 0) {
+          const item = items[0].cloneNode(true);
+          event.target.innerHTML = "";
+          event.target.appendChild(item);
+
+          // Убираем возможность перетаскивания
+          item.draggable = false;
+
+          // Удаляем оригинал из банка слов
+          items[0].remove();
+
+          // Проверяем, все ли пары сопоставлены
+          checkAllMatchesDone();
+        }
+      };
+    } catch (error) {
+      console.error("Ошибка при получении вариантов перевода:", error);
+      if (feedbackElement) {
+        feedbackElement.textContent =
+          "Ошибка при загрузке вариантов. Попробуйте еще раз.";
+        feedbackElement.className = "feedback incorrect";
+      }
+    }
+  }
+
+  // Проверка, все ли пары в сопоставлении заполнены
+  function checkAllMatchesDone() {
+    const dropZones = document.querySelectorAll(".word-drop");
+    if (!dropZones || dropZones.length === 0) return;
+
+    const allFilled = Array.from(dropZones).every(
+      (zone) => zone.children.length > 0
+    );
+
+    if (allFilled) {
+      // Собираем ответы для отправки на сервер
+      const answers = [];
+
+      dropZones.forEach((zone) => {
+        const wordId = zone.dataset.wordId;
+        const answerElement = zone.querySelector(".word-item");
+
+        if (answerElement) {
+          answers.push({
+            wordId: parseInt(wordId),
+            answer: answerElement.textContent,
+          });
+        }
+      });
+
+      // Отправляем ответы на сервер для проверки
+      checkMatchingAnswers(answers);
+    }
+  }
+
+  // Функция для проверки ответов сопоставления на сервере
+  async function checkMatchingAnswers(answers) {
+    try {
+      const response = await fetch("/api/matching/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ answers: answers }),
+      });
+
+      const result = await response.json();
+
+      // Обрабатываем результаты
+      if (result.all_correct) {
+        // Все сопоставления верны
+        correctAnswers++;
+        totalQuestions++;
+        score += 10;
+
+        if (feedbackElement) {
+          feedbackElement.textContent = `Правильно! +10 очков`;
+          feedbackElement.className = "feedback correct";
+        }
+
+        // Анимация награды
+        showRewardAnimation();
+
+        // Отмечаем правильные ответы
+        result.results.forEach((item) => {
+          const dropZone = document.querySelector(
+            `.word-drop[data-word-id="${item.word_id}"]`
+          );
+          if (dropZone) {
+            dropZone.classList.add("correct-match");
+          }
+        });
+      } else {
+        // Есть неправильные сопоставления
+        totalQuestions++;
+
+        if (feedbackElement) {
+          feedbackElement.textContent = `Сопоставление выполнено неверно. Попробуйте еще раз!`;
+          feedbackElement.className = "feedback incorrect";
+        }
+
+        // Отмечаем правильные и неправильные ответы
+        result.results.forEach((item) => {
+          const dropZone = document.querySelector(
+            `.word-drop[data-word-id="${item.word_id}"]`
+          );
+          if (dropZone) {
+            if (item.correct) {
+              dropZone.classList.add("correct-match");
+            } else {
+              dropZone.classList.add("incorrect-match");
+            }
+          }
+        });
+      }
+
+      // Блокируем интерфейс
+      disableInputs();
+
+      // Показываем кнопку следующего вопроса
+      if (nextButton) nextButton.style.display = "block";
+
+      // Скрываем кнопки
+      if (hintBtn) hintBtn.style.display = "none";
+      if (skipBtn) skipBtn.style.display = "none";
+
+      // Обновляем игровой прогресс
+      updateGameProgress();
+    } catch (error) {
+      console.error("Ошибка при проверке сопоставлений:", error);
+    }
+  }
+
+  // Функция перемешивания массива
+  function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
   }
 
   // Анимация для награды
   function showRewardAnimation() {
     const rewardContainer = document.getElementById("reward-animation");
+    if (!rewardContainer) return;
 
     for (let i = 0; i < 10; i++) {
       const star = document.createElement("div");
