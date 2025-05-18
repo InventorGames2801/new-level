@@ -61,7 +61,7 @@ def game_page(request: Request, current_user: User = Depends(get_current_user)):
 @router.post("/api/game/start")
 def start_game_session(
     request: Request,
-    game_type: str = Body(...),
+    data: dict = Body(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -69,7 +69,9 @@ def start_game_session(
     Создает новую игровую сессию и возвращает ее ID.
     """
     try:
-        if game_type not in ["scramble", "matching", "typing"]:
+        game_type = data.get("game_type")
+
+        if not game_type or game_type not in ["scramble", "matching", "typing"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный тип игры"
             )
@@ -81,10 +83,9 @@ def start_game_session(
         raise he
     except Exception as e:
         logger.error(f"Ошибка при создании игровой сессии: {e}")
-        return render_error_page(
-            request=request,
-            error_message="Ошибка при создании игровой сессии",
-            exception=e,
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Ошибка при создании игровой сессии: {str(e)}"},
         )
 
 

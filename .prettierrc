@@ -3,7 +3,6 @@
     {
       "files": "*.html",
       "options": {
-        "parser": "html",
         "htmlWhitespaceSensitivity": "ignore"
       }
     }

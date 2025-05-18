@@ -467,15 +467,36 @@ endblock %} {% block additional_styles %}
 <script>
   // Глобальные переменные для игр
   let currentGame = "scramble";
-  let currentWords = [];
-  let currentWordIndex = 0;
+  let gameLoaded = {
+    scramble: false,
+    matching: false,
+    typing: false,
+  };
+  let currentWords = {
+    scramble: [],
+    matching: [],
+    typing: [],
+  };
+  let currentWordIndex = {
+    scramble: 0,
+    matching: 0,
+    typing: 0,
+  };
   let gameSession = null;
   let score = 0;
   let correctAnswers = 0;
   let totalQuestions = 0;
-  let expForLevelUp = 100; // Можно получить из настроек
+  let expForLevelUp = 100; // Получим из настроек
+  let hintPenalty = 3; // Получим из настроек
+  let gamePoints = {
+    scramble: 10,
+    matching: 15,
+    typing: 12,
+  }; // Получим из настроек
+  let unlimitedAttempts = true; // Получим из настроек
+  let showCorrectAnswer = false; // Получим из настроек
 
-  // DOM-элементы
+  // DOM-элементы - определяем в начале скрипта
   const gameTabs = document.querySelectorAll(".game-tab");
   const gameContainers = document.querySelectorAll(
     "#scramble-game, #matching-game, #typing-game"
@@ -497,13 +518,71 @@ endblock %} {% block additional_styles %}
   const typingInput = document.getElementById("typing-input");
   const typingCheckBtn = document.getElementById("typing-check-btn");
 
+  // Загрузка настроек из сервера
+  async function loadGameSettings() {
+    try {
+      const response = await fetch("/api/game/settings");
+      if (!response.ok) {
+        console.error("Ошибка получения настроек:", response.status);
+        return;
+      }
+
+      const settings = await response.json();
+
+      // Получаем настройки очков для разных игр
+      gamePoints.scramble = parseInt(settings.points_for_scramble || 10);
+      gamePoints.matching = parseInt(settings.points_for_matching || 15);
+      gamePoints.typing = parseInt(settings.points_for_typing || 12);
+
+      // Другие настройки
+      expForLevelUp = parseInt(settings.points_for_level_up || 100);
+      hintPenalty = parseInt(settings.hint_penalty || 3);
+      unlimitedAttempts = settings.unlimited_attempts === "1";
+      showCorrectAnswer = settings.show_correct_answer === "1";
+
+      console.log("Загружены настройки игры:", settings);
+    } catch (error) {
+      console.error("Ошибка при загрузке настроек:", error);
+    }
+  }
+
   // Инициализация при загрузке страницы
-  document.addEventListener("DOMContentLoaded", () => {
-    loadGame("scramble");
+  document.addEventListener("DOMContentLoaded", async () => {
+    // Загружаем настройки
+    await loadGameSettings();
+
+    // Проверяем URL для определения начальной игры
+    const params = new URLSearchParams(window.location.search);
+    const initialGame = params.get("game") || "scramble";
+
+    if (["scramble", "matching", "typing"].includes(initialGame)) {
+      currentGame = initialGame;
+
+      // Активируем соответствующую вкладку
+      gameTabs.forEach((tab) => {
+        if (tab.dataset.game === initialGame) {
+          tab.classList.add("active");
+        } else {
+          tab.classList.remove("active");
+        }
+      });
+
+      // Показываем соответствующую игру
+      gameContainers.forEach((container) => {
+        container.classList.remove("game-active");
+      });
+      document
+        .getElementById(`${initialGame}-game`)
+        .classList.add("game-active");
+    }
+
+    // Загружаем игру
+    loadGame(currentGame);
 
     // Обработчики событий для кнопок игр
     gameTabs.forEach((tab) => {
       tab.addEventListener("click", () => {
+        // Активируем вкладку
         gameTabs.forEach((t) => t.classList.remove("active"));
         tab.classList.add("active");
 
@@ -518,8 +597,13 @@ endblock %} {% block additional_styles %}
           .getElementById(`${gameType}-game`)
           .classList.add("game-active");
 
-        // Загружаем новую игру
-        loadGame(gameType);
+        // Загружаем игру только если она еще не загружена
+        if (!gameLoaded[gameType]) {
+          loadGame(gameType);
+        }
+
+        // Обновляем URL для отражения текущей игры
+        updateGameUrl(gameType);
       });
     });
 
@@ -572,6 +656,13 @@ endblock %} {% block additional_styles %}
       });
     }
   });
+
+  // Функция для обновления URL без перезагрузки страницы
+  function updateGameUrl(gameType) {
+    const url = new URL(window.location);
+    url.searchParams.set("game", gameType);
+    window.history.pushState({}, "", url);
+  }
 
   async function startGameSession(gameType) {
     try {
@@ -639,8 +730,9 @@ endblock %} {% block additional_styles %}
     await startGameSession(gameType);
 
     // Загружаем слова
-    currentWords = await loadWordsForGame(gameType);
-    currentWordIndex = 0;
+    currentWords[gameType] = await loadWordsForGame(gameType);
+    currentWordIndex[gameType] = 0;
+    gameLoaded[gameType] = true;
 
     // Показываем первый вопрос
     showCurrentQuestion();
@@ -649,14 +741,14 @@ endblock %} {% block additional_styles %}
   // Показать текущий вопрос
   function showCurrentQuestion() {
     // Проверяем, есть ли слова
-    if (!currentWords || currentWords.length === 0) {
+    if (!currentWords[currentGame] || currentWords[currentGame].length === 0) {
       console.error("Нет доступных слов для отображения");
       loadGameWords(); // Пытаемся загрузить новые слова
       return;
     }
 
     // Если текущий индекс выходит за пределы массива, загружаем новые слова
-    if (currentWordIndex >= currentWords.length) {
+    if (currentWordIndex[currentGame] >= currentWords[currentGame].length) {
       loadGameWords();
       return;
     }
@@ -676,12 +768,12 @@ endblock %} {% block additional_styles %}
 
     // Показываем соответствующий вопрос в зависимости от типа игры
     if (currentGame === "scramble" && scrambledWordElement) {
-      const word = currentWords[currentWordIndex];
+      const word = currentWords[currentGame][currentWordIndex[currentGame]];
       scrambledWordElement.textContent = word.scrambled;
     } else if (currentGame === "matching") {
       setupMatchingGame();
     } else if (currentGame === "typing" && typingQuestion) {
-      const word = currentWords[currentWordIndex];
+      const word = currentWords[currentGame][currentWordIndex[currentGame]];
       typingQuestion.textContent = word.description;
     }
 
@@ -702,8 +794,8 @@ endblock %} {% block additional_styles %}
       const newWords = await loadWordsForGame(currentGame);
 
       // Обновляем массив слов и сбрасываем индекс
-      currentWords = newWords;
-      currentWordIndex = 0;
+      currentWords[currentGame] = newWords;
+      currentWordIndex[currentGame] = 0;
 
       // Показываем новый вопрос
       showCurrentQuestion();
@@ -719,9 +811,9 @@ endblock %} {% block additional_styles %}
 
   // Обработка ответа для игры "Анаграммы"
   function checkScrambleAnswer() {
-    if (!scrambleInput || scrambleInput.disabled) return; // Предотвращаем повторную проверку
+    if (!scrambleInput) return;
 
-    const word = currentWords[currentWordIndex];
+    const word = currentWords[currentGame][currentWordIndex[currentGame]];
     const userAnswer = scrambleInput.value.trim().toLowerCase();
 
     // Валидация на сервере
@@ -730,9 +822,9 @@ endblock %} {% block additional_styles %}
 
   // Обработка ответа для игры "Написание слов"
   function checkTypingAnswer() {
-    if (!typingInput || typingInput.disabled) return; // Предотвращаем повторную проверку
+    if (!typingInput) return;
 
-    const word = currentWords[currentWordIndex];
+    const word = currentWords[currentGame][currentWordIndex[currentGame]];
     const userAnswer = typingInput.value.trim().toLowerCase();
 
     // Валидация на сервере
@@ -762,11 +854,12 @@ endblock %} {% block additional_styles %}
         correctAnswers++;
         totalQuestions++;
 
-        // Начисляем очки
-        score += 10;
+        // Начисляем очки в зависимости от типа игры
+        const points = gamePoints[gameType] || 10;
+        score += points;
 
         if (feedbackElement) {
-          feedbackElement.textContent = `Правильно! +10 очков`;
+          feedbackElement.textContent = `Правильно! +${points} очков`;
           feedbackElement.className = "feedback correct";
         }
 
@@ -779,7 +872,7 @@ endblock %} {% block additional_styles %}
         // Показываем кнопку следующего вопроса
         if (nextButton) nextButton.style.display = "block";
 
-        // Скрываем кнопки
+        // Скрываем кнопки подсказки и пропуска
         if (hintBtn) hintBtn.style.display = "none";
         if (skipBtn) skipBtn.style.display = "none";
 
@@ -789,26 +882,60 @@ endblock %} {% block additional_styles %}
         // Неправильный ответ
         totalQuestions++;
 
-        if (feedbackElement) {
-          feedbackElement.textContent = `Неверно. Попробуйте еще раз!`;
-          feedbackElement.className = "feedback incorrect";
-        }
-
-        // Блокируем поля ввода
-        disableInputs();
-
-        // Показываем кнопку следующего вопроса
-        if (nextButton) nextButton.style.display = "block";
-
-        // Скрываем кнопки
-        if (hintBtn) hintBtn.style.display = "none";
-        if (skipBtn) skipBtn.style.display = "none";
-
-        // Отправляем обновленные результаты
-        updateGameProgress();
+        // Обрабатываем неправильный ответ
+        handleIncorrectAnswer(wordId, gameType);
       }
     } catch (error) {
       console.error("Ошибка при проверке ответа:", error);
+    }
+  }
+
+  // Функция для обработки неправильного ответа
+  function handleIncorrectAnswer(wordId, gameType) {
+    // Получаем слово
+    const word = currentWords[currentGame][currentWordIndex[currentGame]];
+
+    if (unlimitedAttempts) {
+      // Режим неограниченных попыток - показываем сообщение об ошибке, но не блокируем ввод
+      if (feedbackElement) {
+        feedbackElement.textContent = "Неверно. Попробуйте еще раз!";
+        feedbackElement.className = "feedback incorrect";
+      }
+    } else {
+      // Режим ограниченных попыток - показываем правильный ответ, если включена соответствующая настройка
+      if (showCorrectAnswer) {
+        // Показываем правильный ответ
+        let correctAnswer = "";
+        if (gameType === "scramble" || gameType === "typing") {
+          correctAnswer = word.text;
+        } else if (gameType === "matching") {
+          correctAnswer = word.translation;
+        }
+
+        if (feedbackElement) {
+          feedbackElement.textContent = `Неверно. Правильный ответ: ${correctAnswer}`;
+          feedbackElement.className = "feedback incorrect";
+        }
+      } else {
+        // Не показываем правильный ответ
+        if (feedbackElement) {
+          feedbackElement.textContent = "Неверно. Попробуйте следующий вопрос";
+          feedbackElement.className = "feedback incorrect";
+        }
+      }
+
+      // Блокируем поля ввода
+      disableInputs();
+
+      // Показываем кнопку следующего вопроса
+      if (nextButton) nextButton.style.display = "block";
+
+      // Скрываем кнопки подсказки и пропуска
+      if (hintBtn) hintBtn.style.display = "none";
+      if (skipBtn) skipBtn.style.display = "none";
+
+      // Отправляем обновленные результаты
+      updateGameProgress();
     }
   }
 
@@ -869,14 +996,14 @@ endblock %} {% block additional_styles %}
   // Использование подсказки
   function useHint() {
     if (
-      !currentWords ||
-      currentWords.length === 0 ||
-      currentWordIndex >= currentWords.length
+      !currentWords[currentGame] ||
+      currentWords[currentGame].length === 0 ||
+      currentWordIndex[currentGame] >= currentWords[currentGame].length
     ) {
       return;
     }
 
-    const word = currentWords[currentWordIndex];
+    const word = currentWords[currentGame][currentWordIndex[currentGame]];
 
     if (currentGame === "scramble" && feedbackElement) {
       // Для анаграмм показываем описание в качестве подсказки
@@ -897,6 +1024,14 @@ endblock %} {% block additional_styles %}
 
     // Скрываем кнопку подсказки после использования
     if (hintBtn) hintBtn.style.display = "none";
+
+    // Применяем штраф за использование подсказки
+    if (hintPenalty > 0) {
+      score = Math.max(0, score - hintPenalty);
+      if (feedbackElement) {
+        feedbackElement.textContent += ` (-${hintPenalty} очков)`;
+      }
+    }
   }
 
   // Пропуск вопроса
@@ -904,45 +1039,35 @@ endblock %} {% block additional_styles %}
     // Увеличиваем счетчик вопросов
     totalQuestions++;
 
-    // Блокируем поля ввода
-    disableInputs();
-
-    // Сообщаем о пропуске
-    if (feedbackElement) {
-      feedbackElement.textContent = "Вопрос пропущен";
-      feedbackElement.className = "feedback";
-    }
-
-    // Показываем кнопку следующего вопроса
-    if (nextButton) nextButton.style.display = "block";
-
-    // Скрываем кнопки
-    if (hintBtn) hintBtn.style.display = "none";
-    if (skipBtn) skipBtn.style.display = "none";
+    // Переходим к следующему вопросу без показа кнопки "следующий вопрос"
+    nextQuestion();
   }
 
   // Функция для блокировки полей ввода
   function disableInputs() {
     if (currentGame === "scramble") {
-      if (scrambleInput) scrambleInput.disabled = true;
-      if (scrambleCheckBtn) scrambleCheckBtn.disabled = true;
+      if (scrambleInput && !unlimitedAttempts) scrambleInput.disabled = true;
+      if (scrambleCheckBtn && !unlimitedAttempts)
+        scrambleCheckBtn.disabled = true;
     } else if (currentGame === "typing") {
-      if (typingInput) typingInput.disabled = true;
-      if (typingCheckBtn) typingCheckBtn.disabled = true;
+      if (typingInput && !unlimitedAttempts) typingInput.disabled = true;
+      if (typingCheckBtn && !unlimitedAttempts) typingCheckBtn.disabled = true;
     } else if (currentGame === "matching") {
       // Блокируем перетаскивание для режима сопоставления
-      document.querySelectorAll(".word-item").forEach((item) => {
-        if (item) item.draggable = false;
-      });
+      if (!unlimitedAttempts) {
+        document.querySelectorAll(".word-item").forEach((item) => {
+          if (item) item.draggable = false;
+        });
+      }
     }
   }
 
   // Переход к следующему вопросу
   function nextQuestion() {
-    currentWordIndex++;
+    currentWordIndex[currentGame]++;
 
     // Если слова закончились, загружаем новые
-    if (currentWordIndex >= currentWords.length) {
+    if (currentWordIndex[currentGame] >= currentWords[currentGame].length) {
       loadGameWords();
     } else {
       // Показываем следующий вопрос
@@ -965,13 +1090,13 @@ endblock %} {% block additional_styles %}
     matchingWordBank.innerHTML = "";
 
     // Проверяем, есть ли слова
-    if (!currentWords || currentWords.length === 0) {
+    if (!currentWords[currentGame] || currentWords[currentGame].length === 0) {
       console.error("Нет слов для игры Сопоставление");
       return;
     }
 
     // Получаем слова для сопоставления
-    const words = currentWords.slice(0, 3); // Используем только 3 пары
+    const words = currentWords[currentGame].slice(0, 3); // Используем только 3 пары
 
     // Создаем пары английское слово - пустая зона для русского
     words.forEach((word, index) => {
@@ -997,7 +1122,7 @@ endblock %} {% block additional_styles %}
 
       const options = await response.json();
 
-      // Перемешиваем варианты
+      // Перемешиваем варианты для случайного порядка
       shuffleArray(options);
 
       // Создаем элементы для перетаскивания
@@ -1106,10 +1231,10 @@ endblock %} {% block additional_styles %}
         // Все сопоставления верны
         correctAnswers++;
         totalQuestions++;
-        score += 10;
+        score += gamePoints.matching;
 
         if (feedbackElement) {
-          feedbackElement.textContent = `Правильно! +10 очков`;
+          feedbackElement.textContent = `Правильно! +${gamePoints.matching} очков`;
           feedbackElement.className = "feedback correct";
         }
 
@@ -1125,42 +1250,123 @@ endblock %} {% block additional_styles %}
             dropZone.classList.add("correct-match");
           }
         });
+
+        // Блокируем поля ввода
+        disableInputs();
+
+        // Показываем кнопку следующего вопроса
+        if (nextButton) nextButton.style.display = "block";
+
+        // Скрываем кнопки
+        if (hintBtn) hintBtn.style.display = "none";
+        if (skipBtn) skipBtn.style.display = "none";
+
+        // Обновляем игровой прогресс
+        updateGameProgress();
       } else {
         // Есть неправильные сопоставления
-        totalQuestions++;
-
-        if (feedbackElement) {
-          feedbackElement.textContent = `Сопоставление выполнено неверно. Попробуйте еще раз!`;
-          feedbackElement.className = "feedback incorrect";
-        }
-
-        // Отмечаем правильные и неправильные ответы
-        result.results.forEach((item) => {
-          const dropZone = document.querySelector(
-            `.word-drop[data-word-id="${item.word_id}"]`
-          );
-          if (dropZone) {
-            if (item.correct) {
-              dropZone.classList.add("correct-match");
-            } else {
-              dropZone.classList.add("incorrect-match");
-            }
+        if (unlimitedAttempts) {
+          // В режиме бесконечных попыток просто показываем сообщение
+          if (feedbackElement) {
+            feedbackElement.textContent =
+              "Сопоставление выполнено неверно. Попробуйте еще раз!";
+            feedbackElement.className = "feedback incorrect";
           }
-        });
+
+          // Подсвечиваем неправильные сопоставления, но не блокируем их
+          result.results.forEach((item) => {
+            const dropZone = document.querySelector(
+              `.word-drop[data-word-id="${item.word_id}"]`
+            );
+            if (dropZone) {
+              if (item.correct) {
+                dropZone.classList.add("correct-match");
+              } else {
+                dropZone.classList.add("incorrect-match");
+
+                // Возвращаем элементы обратно в банк слов для переразмещения
+                const wordElement = dropZone.querySelector(".word-item");
+                if (wordElement) {
+                  const answer = wordElement.textContent;
+                  const wordBank =
+                    document.getElementById("matching-word-bank");
+
+                  // Создаем новый элемент
+                  const newItem = document.createElement("div");
+                  newItem.className = "word-item";
+                  newItem.draggable = true;
+                  newItem.setAttribute("ondragstart", "dragWord(event)");
+                  newItem.setAttribute("data-answer", answer);
+                  newItem.textContent = answer;
+
+                  // Добавляем в банк слов
+                  wordBank.appendChild(newItem);
+
+                  // Удаляем из drop-зоны
+                  dropZone.innerHTML = "";
+                  dropZone.classList.remove("incorrect-match");
+                }
+              }
+            }
+          });
+        } else {
+          // В режиме ограниченных попыток
+          totalQuestions++;
+
+          if (feedbackElement) {
+            feedbackElement.textContent = "Сопоставление выполнено неверно.";
+            feedbackElement.className = "feedback incorrect";
+          }
+
+          // Отмечаем правильные и неправильные ответы
+          result.results.forEach((item) => {
+            const dropZone = document.querySelector(
+              `.word-drop[data-word-id="${item.word_id}"]`
+            );
+            if (dropZone) {
+              if (item.correct) {
+                dropZone.classList.add("correct-match");
+              } else {
+                dropZone.classList.add("incorrect-match");
+
+                // Если нужно показывать правильный ответ
+                if (showCorrectAnswer) {
+                  // Получаем слово
+                  const word = currentWords[currentGame].find(
+                    (w) => w.id === item.word_id
+                  );
+                  if (word) {
+                    // Очищаем зону
+                    dropZone.innerHTML = "";
+
+                    // Создаем правильный элемент
+                    const correctElement = document.createElement("div");
+                    correctElement.className = "word-item";
+                    correctElement.textContent = word.translation;
+                    correctElement.style.border = "2px solid green";
+
+                    // Добавляем в drop-зону
+                    dropZone.appendChild(correctElement);
+                  }
+                }
+              }
+            }
+          });
+
+          // Блокируем интерфейс
+          disableInputs();
+
+          // Показываем кнопку следующего вопроса
+          if (nextButton) nextButton.style.display = "block";
+
+          // Скрываем кнопки
+          if (hintBtn) hintBtn.style.display = "none";
+          if (skipBtn) skipBtn.style.display = "none";
+
+          // Обновляем игровой прогресс
+          updateGameProgress();
+        }
       }
-
-      // Блокируем интерфейс
-      disableInputs();
-
-      // Показываем кнопку следующего вопроса
-      if (nextButton) nextButton.style.display = "block";
-
-      // Скрываем кнопки
-      if (hintBtn) hintBtn.style.display = "none";
-      if (skipBtn) skipBtn.style.display = "none";
-
-      // Обновляем игровой прогресс
-      updateGameProgress();
     } catch (error) {
       console.error("Ошибка при проверке сопоставлений:", error);
     }

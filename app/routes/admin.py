@@ -52,7 +52,7 @@ def admin_dashboard(
         return render_error_page(
             request=request,
             error_message="Ошибка при загрузке панели администратора",
-            exception=e
+            exception=e,
         )
 
 
@@ -64,7 +64,8 @@ def admin_dictionary(
 ):
     try:
         logger.info(
-            admin_log_format, f"Администратор {current_admin.email} просматривает словарь"
+            admin_log_format,
+            f"Администратор {current_admin.email} просматривает словарь",
         )
 
         words = db.query(Word).all()
@@ -82,54 +83,79 @@ def admin_dictionary(
         )
     except Exception as e:
         return render_error_page(
-            request=request,
-            error_message="Ошибка при загрузке словаря",
-            exception=e
+            request=request, error_message="Ошибка при загрузке словаря", exception=e
         )
 
 
-@router.get("/admin/settings", response_class=HTMLResponse)
-def admin_settings(
+async def update_settings(
     request: Request,
     current_admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
     try:
         logger.info(
-            admin_log_format, f"Администратор {current_admin.email} просматривает настройки"
+            f"Администратор {current_admin.email} обновляет настройки приложения"
         )
 
-        settings = db.query(GameSetting).all()
+        form_data = await request.form()
+        updated_keys = []
 
-        # TODO: Добавить категоризацию настроек
+        # Для отладки выводим все полученные данные формы
+        logger.debug(f"Полученные данные формы: {dict(form_data)}")
 
-        return templates.TemplateResponse(
-            "admin/settings.html",
-            {
-                "request": request,
-                "admin_user": current_admin,
-                "settings": settings,
-                "active_tab": "settings",
-            },
+        for key, value in form_data.items():
+            if key.startswith("setting_"):
+                setting_key = key.replace("setting_", "")
+
+                # Обработка чекбоксов (они могут не иметь значения, если не отмечены)
+                if key.endswith(("_unlimited_attempts", "_show_correct_answer")):
+                    # Если чекбокс отмечен, value будет не пустым
+                    if value:
+                        value = "1"  # Значение для включенного чекбокса
+                    else:
+                        value = "0"  # Значение для выключенного чекбокса
+
+                setting = (
+                    db.query(GameSetting).filter(GameSetting.key == setting_key).first()
+                )
+
+                if setting:
+                    # Логируем только если значение изменилось
+                    if setting.value != value:
+                        logger.info(
+                            f"Настройка '{setting_key}' изменена с '{setting.value}' на '{value}'"
+                        )
+                        setting.value = value
+                        updated_keys.append(setting_key)
+                else:
+                    # Если настройки нет, создаем ее
+                    logger.info(f"Создание новой настройки: {setting_key} = {value}")
+                    new_setting = GameSetting(
+                        key=setting_key,
+                        value=value,
+                        description=f"Настройка {setting_key}",
+                        category="gameplay",
+                    )
+                    db.add(new_setting)
+                    updated_keys.append(setting_key)
+
+        db.commit()
+
+        # Финальный лог для общего результата операции
+        if updated_keys:
+            logger.info(f"Обновлены настройки: {', '.join(updated_keys)}")
+        else:
+            logger.info("Настройки проверены, но изменений не внесено")
+
+        return RedirectResponse(
+            url="/admin/settings?success=Настройки успешно обновлены", status_code=303
         )
     except Exception as e:
+        db.rollback()
+        logger.error(f"Ошибка при обновлении настроек: {e}")
         return render_error_page(
-            request=request,
-            error_message="Ошибка при загрузке настроек",
-            exception=e
+            request=request, error_message="Ошибка при обновлении настроек", exception=e
         )
-
-
-# Служебная функция для создания анаграмм с рекурсивной защитой от совпадений
-def create_scrambled_word(word):
-    chars = list(word)
-    random.shuffle(chars)
-    scrambled = "".join(chars).upper()
-
-    if scrambled.lower() == word.lower():
-        return create_scrambled_word(word)
-
-    return scrambled
 
 
 @router.post("/admin/words/create")
@@ -150,7 +176,9 @@ def create_word(
 
         # Валидация входных данных
         if not text or len(text.strip()) == 0:
-            raise HTTPException(status_code=400, detail="Текст слова не может быть пустым")
+            raise HTTPException(
+                status_code=400, detail="Текст слова не может быть пустым"
+            )
 
         if not translation or len(translation.strip()) == 0:
             raise HTTPException(status_code=400, detail="Перевод не может быть пустым")
@@ -169,25 +197,63 @@ def create_word(
                 description=description.strip(),
                 difficulty=difficulty,
                 created_at=datetime.now(timezone.utc),
+                times_shown=0,
+                times_correct=0,
+                correct_ratio=0.0,
             )
 
             db.add(word)
             db.commit()
 
-            logger.info(admin_log_format, f"Слово '{text}' успешно создано с ID: {word.id}")
+            logger.info(
+                admin_log_format, f"Слово '{text}' успешно создано с ID: {word.id}"
+            )
 
             return RedirectResponse(url="/admin/dictionary", status_code=303)
         except Exception as e:
             db.rollback()
             logger.error(admin_log_format, f"Ошибка при создании слова: {e}")
-            raise HTTPException(status_code=500, detail=f"Ошибка при создании слова: {e}")
+            raise HTTPException(
+                status_code=500, detail=f"Ошибка при создании слова: {e}"
+            )
     except HTTPException as he:
         raise he
     except Exception as e:
         return render_error_page(
-            request=request,
-            error_message="Ошибка при создании слова",
-            exception=e
+            request=request, error_message="Ошибка при создании слова", exception=e
+        )
+
+
+@router.post("/admin/words/{word_id}/delete")
+def delete_word(
+    word_id: int,
+    request: Request,
+    current_admin: User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        word = db.query(Word).filter(Word.id == word_id).first()
+        if not word:
+            raise HTTPException(status_code=404, detail="Слово не найдено")
+
+        logger.info(
+            admin_log_format,
+            f"Администратор {current_admin.email} удаляет слово ID: {word_id}, текст: '{word.text}'",
+        )
+
+        db.delete(word)
+        db.commit()
+
+        logger.info(admin_log_format, f"Слово с ID: {word_id} успешно удалено")
+
+        return RedirectResponse(url="/admin/dictionary", status_code=303)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        db.rollback()
+        logger.error(admin_log_format, f"Ошибка при удалении слова: {e}")
+        return render_error_page(
+            request=request, error_message="Ошибка при удалении слова", exception=e
         )
 
 
@@ -245,79 +311,7 @@ def update_word(
         db.rollback()
         logger.error(admin_log_format, f"Ошибка при обновлении слова: {e}")
         return render_error_page(
-            request=request,
-            error_message="Ошибка при обновлении слова",
-            exception=e
-        )
-
-
-@router.post("/admin/words/{word_id}/delete")
-def delete_word(
-    word_id: int,
-    request: Request,
-    current_admin: User = Depends(get_admin_user),
-    db: Session = Depends(get_db),
-):
-    try:
-        word = db.query(Word).filter(Word.id == word_id).first()
-        if not word:
-            raise HTTPException(status_code=404, detail="Слово не найдено")
-
-        logger.info(
-            admin_log_format,
-            f"Администратор {current_admin.email} удаляет слово ID: {word_id}, текст: '{word.text}'",
-        )
-
-        db.delete(word)
-        db.commit()
-
-        logger.info(admin_log_format, f"Слово с ID: {word_id} успешно удалено")
-
-        return RedirectResponse(url="/admin/dictionary", status_code=303)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        db.rollback()
-        logger.error(admin_log_format, f"Ошибка при удалении слова: {e}")
-        return render_error_page(
-            request=request,
-            error_message="Ошибка при удалении слова",
-            exception=e
-        )
-
-
-@router.get("/admin/words/{word_id}/edit", response_class=HTMLResponse)
-def edit_word_form(
-    word_id: int,
-    request: Request,
-    current_admin: User = Depends(get_admin_user),
-    db: Session = Depends(get_db),
-):
-    try:
-        logger.info(
-            admin_log_format,
-            f"Администратор {current_admin.email} открывает форму редактирования слова ID: {word_id}",
-        )
-
-        word = db.query(Word).filter(Word.id == word_id).first()
-        if not word:
-            logger.warning(
-                admin_log_format,
-                f"Попытка редактирования несуществующего слова ID: {word_id}",
-            )
-            raise HTTPException(status_code=404, detail="Слово не найдено")
-
-        return templates.TemplateResponse(
-            "admin/edit_word.html",
-            {"request": request, "admin_user": current_admin, "word": word},
-        )
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        return render_error_page(
-            request=request,
-            error_message="Ошибка при загрузке формы редактирования",
-            exception=e
+            request=request, error_message="Ошибка при обновлении слова", exception=e
         )
 
 
@@ -336,19 +330,25 @@ async def update_settings(
         form_data = await request.form()
         updated_keys = []
 
+        # Для отладки выводим все полученные данные формы
+        logger.debug(f"Полученные данные формы: {dict(form_data)}")
+
         for key, value in form_data.items():
             if key.startswith("setting_"):
                 setting_key = key.replace("setting_", "")
 
-                if value is None or len(str(value).strip()) == 0:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Значение для настройки '{setting_key}' не может быть пустым",
-                    )
+                # Обработка чекбоксов (они могут не иметь значения, если не отмечены)
+                if key.endswith(("_unlimited_attempts", "_show_correct_answer")):
+                    # Если чекбокс отмечен, value будет не пустым
+                    if value:
+                        value = "1"  # Значение для включенного чекбокса
+                    else:
+                        value = "0"  # Значение для выключенного чекбокса
 
                 setting = (
                     db.query(GameSetting).filter(GameSetting.key == setting_key).first()
                 )
+
                 if setting:
                     # Логируем только если значение изменилось
                     if setting.value != value:
@@ -358,6 +358,17 @@ async def update_settings(
                         )
                         setting.value = value
                         updated_keys.append(setting_key)
+                else:
+                    # Если настройки нет, создаем ее
+                    logger.info(f"Создание новой настройки: {setting_key} = {value}")
+                    new_setting = GameSetting(
+                        key=setting_key,
+                        value=value,
+                        description=f"Настройка {setting_key}",
+                        category="gameplay",
+                    )
+                    db.add(new_setting)
+                    updated_keys.append(setting_key)
 
         db.commit()
 
@@ -371,16 +382,14 @@ async def update_settings(
                 admin_log_format, "Настройки проверены, но изменений не внесено"
             )
 
-        return RedirectResponse(url="/admin/settings", status_code=303)
-    except HTTPException as he:
-        raise he
+        return RedirectResponse(
+            url="/admin/settings?success=Настройки успешно обновлены", status_code=303
+        )
     except Exception as e:
         db.rollback()
         logger.error(admin_log_format, f"Ошибка при обновлении настроек: {e}")
         return render_error_page(
-            request=request,
-            error_message="Ошибка при обновлении настроек",
-            exception=e
+            request=request, error_message="Ошибка при обновлении настроек", exception=e
         )
 
 
@@ -427,7 +436,7 @@ def admin_users(
         return render_error_page(
             request=request,
             error_message="Ошибка при загрузке списка пользователей",
-            exception=e
+            exception=e,
         )
 
 
@@ -480,7 +489,7 @@ def create_user(
         return render_error_page(
             request=request,
             error_message="Ошибка при создании пользователя",
-            exception=e
+            exception=e,
         )
 
 
@@ -525,7 +534,7 @@ def delete_user(
         return render_error_page(
             request=request,
             error_message="Ошибка при удалении пользователя",
-            exception=e
+            exception=e,
         )
 
 
@@ -594,5 +603,5 @@ def toggle_admin_view(
         return render_error_page(
             request=request,
             error_message="Ошибка при изменении роли пользователя",
-            exception=e
+            exception=e,
         )
