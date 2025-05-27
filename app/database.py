@@ -1,5 +1,5 @@
 from sqlalchemy import asc, create_engine
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
@@ -34,9 +34,7 @@ engine = create_engine(
     DATABASE_URL,
     echo=settings.DEBUG,  # SQL-логи только если DEBUG=True
     # Для SQLite нужно убедиться, что check_same_thread=False
-    connect_args=(
-        {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-    ),
+    connect_args=({"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}),
 )
 
 # Создаем фабрику сессий
@@ -70,9 +68,7 @@ def init_db():
         admin_password = os.getenv("ADMIN_PASSWORD")
 
         if not admin_email or not admin_password:
-            logger.warning(
-                "ВНИМАНИЕ: Не установлены переменные ADMIN_EMAIL или ADMIN_PASSWORD!"
-            )
+            logger.warning("ВНИМАНИЕ: Не установлены переменные ADMIN_EMAIL или ADMIN_PASSWORD!")
             logger.warning(
                 "Для безопасности приложения, необходимо установить эти переменные в .env файле"
             )
@@ -102,9 +98,7 @@ def init_db():
                 logger.info(f"Пароль администратора (из .env): {admin_password}")
             db.close()
         else:
-            logger.warning(
-                "Не указаны переменные ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD"
-            )
+            logger.warning("Не указаны переменные ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD")
         return True
     except Exception as e:
         logger.error(f"Ошибка при создании таблиц: {e}")
@@ -124,9 +118,7 @@ def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
 
 
-def create_user(
-    db: Session, name: str, email: str, password: str, role: str = "user"
-) -> User:
+def create_user(db: Session, name: str, email: str, password: str, role: str = "user") -> User:
     """Создание нового пользователя."""
     hashed_password = get_password_hash(password)
     user = User(name=name, email=email, password_hash=hashed_password, role=role)
@@ -170,10 +162,7 @@ def get_user_stats(db: Session, user_id: int) -> Dict[str, Any]:
 
     # Получаем общее количество игр
     total_games = (
-        db.query(func.count(GameSession.id))
-        .filter(GameSession.user_id == user_id)
-        .scalar()
-        or 0
+        db.query(func.count(GameSession.id)).filter(GameSession.user_id == user_id).scalar() or 0
     )
 
     # Получаем общее количество правильных ответов
@@ -206,26 +195,19 @@ def get_users_statistics(db: Session) -> Dict[str, Any]:
     # Количество пользователей, зарегистрированных за последние 30 дней
     thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
     new_users_30_days = (
-        db.query(func.count(User.id))
-        .filter(User.created_at >= thirty_days_ago)
-        .scalar()
-        or 0
+        db.query(func.count(User.id)).filter(User.created_at >= thirty_days_ago).scalar() or 0
     )
 
     # Активные пользователи (с активностью за последние 7 дней)
     seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
     active_users = (
-        db.query(func.count(User.id.distinct()))
-        .filter(User.last_login >= seven_days_ago)
-        .scalar()
+        db.query(func.count(User.id.distinct())).filter(User.last_login >= seven_days_ago).scalar()
         or 0
     )
 
     # Статистика по уровням
     level_stats = (
-        db.query(User.level, func.count(User.id).label("count"))
-        .group_by(User.level)
-        .all()
+        db.query(User.level, func.count(User.id).label("count")).group_by(User.level).all()
     )
 
     level_distribution = {level: count for level, count in level_stats}
@@ -292,9 +274,7 @@ def get_random_words(
     return selected_words
 
 
-def add_user_experience(
-    db: Session, user_id: int, exp_points: int
-) -> Tuple[User, bool, bool]:
+def add_user_experience(db: Session, user_id: int, exp_points: int) -> Tuple[User, bool, bool]:
     """
     Добавление очков опыта пользователю и проверка на повышение уровня.
     Возвращает кортеж: (пользователь, был_ли_повышен_уровень, достигнут_ли_дневной_лимит)
@@ -483,9 +463,7 @@ def complete_game_session(
     return session
 
 
-def get_user_game_history(
-    db: Session, user_id: int, limit: int = 10
-) -> List[GameSession]:
+def get_user_game_history(db: Session, user_id: int, limit: int = 10) -> List[GameSession]:
     """Получение истории игр пользователя."""
     return (
         db.query(GameSession)
