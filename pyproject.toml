@@ -2,9 +2,9 @@
 dev = "python main.py --dev"
 prod = "python main.py --prod"
 test = "pytest"
-lint = "flake8 app tests"
-format = "black app tests"
-sort-imports = "isort app tests"
+lint = "flake8 app test"
+format = "black app test"
+sort-imports = "isort app test"
 coverage = "pytest --cov=app --cov-report=html"
 
 [tool.pdm.dev-dependencies]
@@ -49,10 +49,27 @@ multi_line_output = 3
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q"
-testpaths = ["tests"]
+testpaths = ["test"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
+filterwarnings = [
+    "ignore::DeprecationWarning:starlette.*",
+    "ignore::PendingDeprecationWarning:starlette.*",
+    "ignore::DeprecationWarning:pydantic.*",
+    "ignore::PendingDeprecationWarning:pydantic.*",
+    "ignore::UserWarning:pydantic.*",
+]
+markers = [
+    "unit: mark a test as a unit test.",
+    "integration: mark a test as an integration test.",
+    "auth: mark a test as related to authentication.",
+    "game: mark a test as related to game functionality.",
+    "admin: mark a test as related to admin functionality.",
+    "database: mark a test as related to database operations.",
+    "api: mark a test as related to API endpoints.",
+    "slow: mark a test as slow running.",
+]
 
 [tool.coverage.run]
 source = ["app"]
@@ -61,7 +78,7 @@ omit = [
     "app/templates/*",
     "*/__init__.py",
     "*/migrations/*",
-    "*/tests/*",
+    "*/test/*",
     "*/venv/*",
     "*/env/*",
     "setup.py",

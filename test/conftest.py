@@ -1,6 +1,7 @@
 """
 Pytest configuration and shared fixtures
 """
+
 import pytest
 import os
 import tempfile
@@ -19,21 +20,21 @@ from app.password_utils import get_password_hash
 def test_db_engine():
     """Create a test database engine using SQLite in memory"""
     # Create a temporary file for the test database
-    db_fd, db_path = tempfile.mkstemp(suffix='.db')
+    db_fd, db_path = tempfile.mkstemp(suffix=".db")
     os.close(db_fd)
-    
+
     # Create engine with SQLite
     engine = create_engine(
         f"sqlite:///{db_path}",
         connect_args={"check_same_thread": False},
-        echo=False  # Set to True for SQL debugging
+        echo=False,  # Set to True for SQL debugging
     )
-    
+
     # Create all tables
     Base.metadata.create_all(bind=engine)
-    
+
     yield engine
-    
+
     # Cleanup
     os.unlink(db_path)
 
@@ -43,7 +44,7 @@ def test_db_session(test_db_engine):
     """Create a test database session"""
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_db_engine)
     session = TestingSessionLocal()
-    
+
     try:
         yield session
     finally:
@@ -54,17 +55,18 @@ def test_db_session(test_db_engine):
 @pytest.fixture(scope="function")
 def client(test_db_session):
     """Create a test client with database dependency override"""
+
     def override_get_db():
         try:
             yield test_db_session
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
-    
+
     with TestClient(app) as test_client:
         yield test_client
-    
+
     app.dependency_overrides.clear()
 
 
@@ -80,7 +82,7 @@ def sample_user(test_db_session):
         experience=0,
         total_points=0,
         daily_experience=0,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     test_db_session.add(user)
     test_db_session.commit()
@@ -100,7 +102,7 @@ def sample_admin(test_db_session):
         experience=100,
         total_points=150,
         daily_experience=50,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     test_db_session.add(admin)
     test_db_session.commit()
@@ -120,7 +122,7 @@ def sample_words(test_db_session):
             times_shown=0,
             times_correct=0,
             correct_ratio=0.0,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         ),
         Word(
             text="computer",
@@ -130,7 +132,7 @@ def sample_words(test_db_session):
             times_shown=5,
             times_correct=3,
             correct_ratio=0.6,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         ),
         Word(
             text="philosophy",
@@ -140,18 +142,18 @@ def sample_words(test_db_session):
             times_shown=2,
             times_correct=1,
             correct_ratio=0.5,
-            created_at=datetime.now(timezone.utc)
-        )
+            created_at=datetime.now(timezone.utc),
+        ),
     ]
-    
+
     for word in words:
         test_db_session.add(word)
-    
+
     test_db_session.commit()
-    
+
     for word in words:
         test_db_session.refresh(word)
-    
+
     return words
 
 
@@ -165,7 +167,7 @@ def sample_game_session(test_db_session, sample_user):
         started_at=datetime.now(timezone.utc),
         correct_answers=0,
         total_questions=0,
-        difficulty_level="easy"
+        difficulty_level="easy",
     )
     test_db_session.add(session)
     test_db_session.commit()
@@ -181,36 +183,36 @@ def sample_game_settings(test_db_session):
             key="points_per_answer",
             value="10",
             description="Points awarded per correct answer",
-            category="scoring"
+            category="scoring",
         ),
         GameSetting(
             key="points_for_level_up",
             value="100",
             description="Points needed to level up",
-            category="progression"
+            category="progression",
         ),
         GameSetting(
             key="daily_experience_limit",
             value="200",
             description="Daily experience limit",
-            category="limits"
+            category="limits",
         ),
         GameSetting(
             key="streak_bonus",
             value="5",
             description="Bonus points for perfect score",
-            category="scoring"
-        )
+            category="scoring",
+        ),
     ]
-    
+
     for setting in settings:
         test_db_session.add(setting)
-    
+
     test_db_session.commit()
-    
+
     for setting in settings:
         test_db_session.refresh(setting)
-    
+
     return settings
 
 
@@ -218,10 +220,7 @@ def sample_game_settings(test_db_session):
 def authenticated_user_session(client, sample_user):
     """Create an authenticated user session"""
     # Login the user
-    response = client.post("/login", data={
-        "email": sample_user.email,
-        "password": "testpassword"
-    })
+    response = client.post("/login", data={"email": sample_user.email, "password": "testpassword"})
     assert response.status_code in [200, 303]  # Success or redirect
     return client
 
@@ -230,107 +229,8 @@ def authenticated_user_session(client, sample_user):
 def authenticated_admin_session(client, sample_admin):
     """Create an authenticated admin session"""
     # Login the admin
-    response = client.post("/login", data={
-        "email": sample_admin.email,
-        "password": "adminpassword"
-    })
+    response = client.post(
+        "/login", data={"email": sample_admin.email, "password": "adminpassword"}
+    )
     assert response.status_code in [200, 303]  # Success or redirect
     return client
-
-
-# Test data constants
-class TestData:
-    """Constants for test data"""
-    
-    VALID_USER_DATA = {
-        "name": "New User",
-        "email": "newuser@example.com",
-        "password": "newpassword"
-    }
-    
-    VALID_WORD_DATA = {
-        "text": "test",
-        "translation": "тест",
-        "description": "a trial or examination",
-        "difficulty": "easy"
-    }
-    
-    VALID_GAME_TYPES = ["scramble", "matching", "typing"]
-    VALID_DIFFICULTIES = ["easy", "medium", "hard"]
-    
-    INVALID_EMAILS = [
-        "invalid-email",
-        "",
-        "test@",
-        "@example.com",
-        "test.example.com"
-    ]
-    
-    INVALID_PASSWORDS = [
-        "",
-        "123",  # Too short
-        " ",    # Only whitespace
-    ]
-
-
-# Helper functions for tests
-def create_test_user(db_session, **kwargs):
-    """Helper function to create a test user with custom parameters"""
-    default_data = {
-        "name": "Test User",
-        "email": "test@example.com",
-        "password_hash": get_password_hash("testpassword"),
-        "role": "user",
-        "level": 1,
-        "experience": 0,
-        "total_points": 0,
-        "daily_experience": 0,
-        "created_at": datetime.now(timezone.utc)
-    }
-    default_data.update(kwargs)
-    
-    user = User(**default_data)
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    return user
-
-
-def create_test_word(db_session, **kwargs):
-    """Helper function to create a test word with custom parameters"""
-    default_data = {
-        "text": "test",
-        "translation": "тест",
-        "description": "a test word",
-        "difficulty": "easy",
-        "times_shown": 0,
-        "times_correct": 0,
-        "correct_ratio": 0.0,
-        "created_at": datetime.now(timezone.utc)
-    }
-    default_data.update(kwargs)
-    
-    word = Word(**default_data)
-    db_session.add(word)
-    db_session.commit()
-    db_session.refresh(word)
-    return word
-
-
-# Markers for different test categories
-pytest_markers = [
-    "unit: marks tests as unit tests",
-    "integration: marks tests as integration tests",
-    "auth: marks tests related to authentication",
-    "game: marks tests related to game functionality",
-    "admin: marks tests related to admin functionality",
-    "database: marks tests related to database operations",
-    "api: marks tests related to API endpoints",
-    "slow: marks tests as slow running",
-]
-
-# Configure pytest markers
-def pytest_configure(config):
-    """Configure pytest markers"""
-    for marker in pytest_markers:
-        config.addinivalue_line("markers", marker)

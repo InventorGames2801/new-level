@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import List, Optional, Union
 from datetime import datetime
 
@@ -69,7 +69,7 @@ class WordCreate(WordBase):
     translation: Optional[str] = None
     description: Optional[str] = None
 
-    @validator("scrambled", always=True)
+    @field_validator("scrambled", always=True)
     def ensure_scrambled_for_scramble_game(cls, v, values):
         """Проверяет, что для игры 'scramble' есть поле scrambled."""
         if values.get("game_type") == "scramble" and not v:

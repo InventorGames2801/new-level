@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -30,11 +31,32 @@ logger = logging.getLogger(__name__)
 
 logging.getLogger("sqlalchemy.engine").propagate = False
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Приложение запускается...")
+
+    # Аналог кода из startup_event:
+    if settings.INIT_DB:
+        try:
+            logger.info("Инициализация базы данных...")
+            setup_database()
+            logger.info("✓ База данных успешно инициализирована")
+        except Exception as e:
+            logger.error(f"✗ Ошибка при инициализации базы данных: {e}")
+    else:
+        logger.info("Инициализация базы данных отключена через настройки")
+
+    yield
+    logger.info("Приложение завершает работу...")
+
+
 # Инициализация FastAPI приложения
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Приложение для изучения английского через игры",
     debug=settings.DEBUG,
+    lifespan=lifespan,
 )
 
 # Регистрация роутеров
@@ -94,27 +116,6 @@ logger.info(f"Директория статических файлов: {static_
 logger.info(f"Директория шаблонов: {template_dir}")
 logger.info(f"DEBUG режим: {settings.DEBUG}")
 logger.info(f"Автоматическая инициализация БД: {settings.INIT_DB}")
-
-
-# Обработчик запуска приложения
-@app.on_event("startup")
-async def startup_event():
-    """
-    Выполняется при запуске приложения.
-    Инициализирует базу данных, если это включено.
-    """
-    logger.info("Приложение запускается...")
-
-    # Инициализируем базу данных, если включен флаг INIT_DB
-    if settings.INIT_DB:
-        try:
-            logger.info("Инициализация базы данных...")
-            setup_database()
-            logger.info("✓ База данных успешно инициализирована")
-        except Exception as e:
-            logger.error(f"✗ Ошибка при инициализации базы данных: {e}")
-    else:
-        logger.info("Инициализация базы данных отключена через настройки")
 
 
 # Регистрируем обработчики исключений
