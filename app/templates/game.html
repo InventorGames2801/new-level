@@ -480,9 +480,6 @@ endblock %} {% block additional_styles %}
     showCorrectAnswer = false;
   let hintUsed = false;
 
-  // Для корректного отображения начисленных очков
-  let lastPointsGained = 0;
-
   const gameTabs = document.querySelectorAll(".game-tab");
   const gameContainers = document.querySelectorAll(
     "#scramble-game, #matching-game, #typing-game"
@@ -542,6 +539,13 @@ endblock %} {% block additional_styles %}
         document
           .getElementById(`${gameType}-game`)
           .classList.add("game-active");
+        // Очищаем feedback/podskazka при переходе между играми
+        if (feedbackElement) {
+          feedbackElement.textContent = "";
+          feedbackElement.className = "feedback";
+        }
+        if (hintBtn) hintBtn.style.display = "block";
+        if (skipBtn) skipBtn.style.display = "block";
         if (!gameLoaded[gameType]) loadGame(gameType);
         updateGameUrl(gameType);
       })
@@ -549,7 +553,7 @@ endblock %} {% block additional_styles %}
 
     nextButton.addEventListener("click", nextQuestion);
 
-    // Общая обработка "Проверить" и Enter
+    // Обработка "Проверить" и Enter
     if (scrambleCheckBtn) scrambleCheckBtn.onclick = () => checkCurrentAnswer();
     if (typingCheckBtn) typingCheckBtn.onclick = () => checkCurrentAnswer();
     if (scrambleInput)
@@ -597,7 +601,10 @@ endblock %} {% block additional_styles %}
   }
 
   async function loadGame(gameType) {
-    if (feedbackElement) feedbackElement.textContent = "";
+    if (feedbackElement) {
+      feedbackElement.textContent = "";
+      feedbackElement.className = "feedback";
+    }
     if (nextButton) nextButton.style.display = "none";
     if (hintBtn) hintBtn.style.display = "block";
     if (skipBtn) skipBtn.style.display = "block";
@@ -609,6 +616,13 @@ endblock %} {% block additional_styles %}
   }
 
   function showCurrentQuestion() {
+    if (feedbackElement) {
+      feedbackElement.textContent = "";
+      feedbackElement.className = "feedback";
+    }
+    if (nextButton) nextButton.style.display = "none";
+    enableInputs();
+    hintUsed = false;
     if (!currentWords[currentGame] || currentWords[currentGame].length === 0) {
       loadGameWords();
       return;
@@ -619,13 +633,6 @@ endblock %} {% block additional_styles %}
     }
     if (scrambleInput) scrambleInput.value = "";
     if (typingInput) typingInput.value = "";
-    if (feedbackElement) {
-      feedbackElement.textContent = "";
-      feedbackElement.className = "feedback";
-    }
-    if (nextButton) nextButton.style.display = "none";
-    enableInputs();
-    hintUsed = false;
     if (currentGame === "scramble" && scrambledWordElement) {
       scrambledWordElement.textContent =
         currentWords.scramble[currentWordIndex.scramble].scrambled;
@@ -642,7 +649,10 @@ endblock %} {% block additional_styles %}
   }
 
   async function loadGameWords() {
-    if (feedbackElement) feedbackElement.textContent = "Загрузка новых слов...";
+    if (feedbackElement) {
+      feedbackElement.textContent = "Загрузка новых слов...";
+      feedbackElement.className = "feedback";
+    }
     const newWords = await loadWordsForGame(currentGame);
     currentWords[currentGame] = newWords;
     currentWordIndex[currentGame] = 0;
@@ -668,6 +678,8 @@ endblock %} {% block additional_styles %}
     if (scrambleCheckBtn) scrambleCheckBtn.style.display = "none";
     if (typingCheckBtn) typingCheckBtn.style.display = "none";
     try {
+      console.log(JSON.stringify({ answers: answers }));
+
       const response = await fetch("/api/word/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -681,11 +693,9 @@ endblock %} {% block additional_styles %}
       if (data.correct) {
         correctAnswers++;
         totalQuestions++;
-        // Берём реальные очки для этого режима из gamePoints!
         let basePoints = gamePoints[gameType] || 10;
         let netPoints = Math.max(0, basePoints - (hintUsed ? hintPenalty : 0));
         score += netPoints;
-        lastPointsGained = netPoints; // Для updateGameProgress
         if (pointsDisplay) {
           pointsDisplay.textContent = String(
             parseInt(pointsDisplay.textContent, 10) + netPoints
@@ -774,6 +784,10 @@ endblock %} {% block additional_styles %}
       document.querySelectorAll(".word-item").forEach((item) => {
         if (item) item.draggable = false;
       });
+      document.querySelectorAll(".word-drop").forEach((zone) => {
+        zone.ondrop = null;
+        zone.ondragover = null;
+      });
     }
   }
 
@@ -802,9 +816,6 @@ endblock %} {% block additional_styles %}
       });
       const data = await response.json();
       if (!data.daily_limit_reached) {
-        // Здесь pointsDisplay не нужно увеличивать на netPoints, так как это уже сделано!
-        // Если сервер прислал total_experience, вы можете просто переписать:
-        // pointsDisplay.textContent = data.total_experience;
         if (progressBar) {
           const progressPercent = Math.min(
             (data.total_experience / expForLevelUp) * 100,
@@ -825,20 +836,26 @@ endblock %} {% block additional_styles %}
   }
 
   function useHint() {
-    if (!currentWords[currentGame] || currentWords[currentGame].length === 0)
-      return;
-    const word = currentWords[currentGame][currentWordIndex[currentGame]];
+    const wordsArr = currentWords[currentGame];
+    const idx = currentWordIndex[currentGame];
+    if (!wordsArr || wordsArr.length === 0 || idx >= wordsArr.length) return;
+    const word = wordsArr[idx];
+    // Для scramble
     if (currentGame === "scramble" && feedbackElement) {
       feedbackElement.textContent = `Подсказка: ${word.description}`;
       feedbackElement.className = "feedback";
-    } else if (currentGame === "typing" && feedbackElement) {
-      const hintLength = Math.ceil(word.text.length / 3);
+    }
+    // Для typing — первые буквы слова
+    else if (currentGame === "typing" && feedbackElement) {
+      const hintLength = Math.max(1, Math.ceil(word.text.length / 3));
       const hint = word.text.substring(0, hintLength) + "...";
       feedbackElement.textContent = `Подсказка: ${hint}`;
       feedbackElement.className = "feedback";
-    } else if (currentGame === "matching" && feedbackElement) {
+    }
+    // Для matching — просто напоминание
+    else if (currentGame === "matching" && feedbackElement) {
       feedbackElement.textContent =
-        "Подсказка: внимательно прочтите описания слов";
+        "Подсказка: внимательно прочтите описания слов.";
       feedbackElement.className = "feedback";
     }
     hintUsed = true;
@@ -847,6 +864,11 @@ endblock %} {% block additional_styles %}
       score = Math.max(0, score - hintPenalty);
       if (feedbackElement)
         feedbackElement.textContent += ` (-${hintPenalty} очков)`;
+      if (pointsDisplay) {
+        pointsDisplay.textContent = String(
+          Math.max(0, parseInt(pointsDisplay.textContent, 10) - hintPenalty)
+        );
+      }
     }
   }
 
@@ -869,8 +891,7 @@ endblock %} {% block additional_styles %}
       const pair = document.createElement("div");
       pair.className = "word-pair";
       pair.innerHTML = `<div class="word-item">${word.text}</div>
-      <div class="word-drop" id="drop${index}" data-word-id="${word.id}"
-        ondrop="dropWord(event)" ondragover="allowDrop(event)"></div>`;
+      <div class="word-drop" id="drop${index}" data-word-id="${word.id}"></div>`;
       matchingPairsContainer.appendChild(pair);
     });
 
@@ -885,30 +906,63 @@ endblock %} {% block additional_styles %}
       dragItem.textContent = option.text;
       matchingWordBank.appendChild(dragItem);
     });
-    window.dragWord = function (event) {
-      event.dataTransfer.setData(
-        "text",
-        event.target.getAttribute("data-answer")
-      );
-    };
-    window.allowDrop = function (event) {
-      event.preventDefault();
-    };
-    window.dropWord = function (event) {
-      event.preventDefault();
-      const data = event.dataTransfer.getData("text");
-      if (event.target.children.length > 0) return;
-      const items = document.querySelectorAll(`[data-answer="${data}"]`);
-      if (items.length > 0) {
-        const item = items[0].cloneNode(true);
-        event.target.innerHTML = "";
-        event.target.appendChild(item);
-        item.draggable = false;
-        items[0].remove();
-        checkAllMatchesDone();
-      }
-    };
+
+    document.querySelectorAll(".word-drop").forEach((zone) => {
+      zone.ondrop = window.dropWord;
+      zone.ondragover = window.allowDrop;
+    });
   }
+
+  window.dragWord = function (event) {
+    event.dataTransfer.setData(
+      "text",
+      event.target.getAttribute("data-answer")
+    );
+  };
+
+  window.allowDrop = function (event) {
+    event.preventDefault();
+  };
+
+  window.dropWord = function (event) {
+    event.preventDefault();
+    const data = event.dataTransfer.getData("text");
+    if (!data) return;
+
+    let dropZone = event.target;
+    if (!dropZone.classList.contains("word-drop")) {
+      dropZone = dropZone.closest(".word-drop");
+      if (!dropZone) return;
+    }
+
+    // Escape спецсимволы для querySelector
+    const safeData = data.replace(/(["'\\])/g, "\\$1");
+
+    // Если уже есть слово в зоне — вернуть в банк
+    if (dropZone.children.length > 0) {
+      const existing = dropZone.querySelector(".word-item");
+      if (existing) {
+        const bank = document.getElementById("matching-word-bank");
+        bank.appendChild(existing);
+        existing.draggable = true;
+        existing.setAttribute("ondragstart", "dragWord(event)");
+      }
+      dropZone.innerHTML = "";
+    }
+
+    const item = document.querySelector(
+      `#matching-word-bank .word-item[data-answer="${safeData}"]`
+    );
+    if (item) {
+      const newItem = item.cloneNode(true);
+      newItem.draggable = false;
+      newItem.removeAttribute("ondragstart");
+      dropZone.appendChild(newItem);
+      item.remove();
+      checkAllMatchesDone();
+    }
+  };
+
   function checkAllMatchesDone() {
     const dropZones = document.querySelectorAll(".word-drop");
     if (!dropZones || dropZones.length === 0) return;
@@ -926,13 +980,14 @@ endblock %} {% block additional_styles %}
             answer: answerElement.textContent,
           });
       });
+      // Логируем для контроля
+      console.log("Отправляется на сервер:", JSON.stringify({ answers }));
       checkMatchingAnswers(answers);
     }
   }
+
   async function checkMatchingAnswers(answers) {
-    document
-      .querySelectorAll(".word-drop")
-      .forEach((zone) => (zone.ondrop = null));
+    // Отключаем drag&drop только после ПРАВИЛЬНОГО ответа!
     try {
       const response = await fetch("/api/matching/check", {
         method: "POST",
@@ -948,7 +1003,6 @@ endblock %} {% block additional_styles %}
           gamePoints.matching - (hintUsed ? hintPenalty : 0)
         );
         score += netPoints;
-        lastPointsGained = netPoints;
         if (pointsDisplay) {
           pointsDisplay.textContent = String(
             parseInt(pointsDisplay.textContent, 10) + netPoints
@@ -965,6 +1019,14 @@ endblock %} {% block additional_styles %}
           );
           if (dropZone) dropZone.classList.add("correct-match");
         });
+        // Только теперь запрещаем любые перемещения
+        document.querySelectorAll(".word-drop").forEach((zone) => {
+          zone.ondrop = null;
+          zone.ondragover = null;
+        });
+        document.querySelectorAll(".word-item").forEach((item) => {
+          item.draggable = false;
+        });
         setTimeout(() => {
           if (nextButton) nextButton.style.display = "block";
         }, 900);
@@ -978,30 +1040,18 @@ endblock %} {% block additional_styles %}
               "Сопоставление выполнено неверно. Попробуйте еще раз!";
             feedbackElement.className = "feedback incorrect";
           }
-          result.results.forEach((item) => {
-            const dropZone = document.querySelector(
-              `.word-drop[data-word-id="${item.word_id}"]`
-            );
-            if (dropZone) {
-              if (item.correct) dropZone.classList.add("correct-match");
-              else {
-                dropZone.classList.add("incorrect-match");
-                const wordElement = dropZone.querySelector(".word-item");
-                if (wordElement) {
-                  const answer = wordElement.textContent;
-                  const wordBank =
-                    document.getElementById("matching-word-bank");
-                  const newItem = document.createElement("div");
-                  newItem.className = "word-item";
-                  newItem.draggable = true;
-                  newItem.setAttribute("ondragstart", "dragWord(event)");
-                  newItem.setAttribute("data-answer", answer);
-                  newItem.textContent = answer;
-                  wordBank.appendChild(newItem);
-                  dropZone.innerHTML = "";
-                  dropZone.classList.remove("incorrect-match");
-                }
-              }
+          // После НЕПРАВИЛЬНОГО ответа снова разрешаем перемещения
+          document.querySelectorAll(".word-drop").forEach((zone) => {
+            zone.ondrop = window.dropWord;
+            zone.ondragover = window.allowDrop;
+          });
+          document.querySelectorAll(".word-item").forEach((item) => {
+            if (
+              item.parentElement &&
+              item.parentElement.classList.contains("word-drop")
+            ) {
+              item.draggable = true;
+              item.setAttribute("ondragstart", "dragWord(event)");
             }
           });
         } else {
@@ -1044,6 +1094,7 @@ endblock %} {% block additional_styles %}
       }
     } catch {}
   }
+
   function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));

@@ -231,6 +231,7 @@ def check_word_answer(
         )
 
 
+# game.py
 @router.post("/api/game/end")
 def end_game_session(
     request: Request,
@@ -241,36 +242,24 @@ def end_game_session(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    Завершает игровую сессию и обновляет прогресс пользователя.
-    """
     try:
-        # Завершаем игровую сессию
         session = database.complete_game_session(
             db, session_id, score, correct_answers, total_questions
         )
-
         if not session:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Игровая сессия не найдена",
             )
 
-        # Добавляем опыт пользователю (N опыта за правильный ответ)
         points_per_answer = database.get_game_setting_int(db, "points_per_answer", 10)
         exp_points = correct_answers * points_per_answer
+        exp_points -= hintPenalty if hintUsed else 0
 
-        # Бонус за серию правильных ответов
-        if correct_answers == total_questions and total_questions > 0:
-            streak_bonus = database.get_game_setting_int(db, "streak_bonus", 5)
-            exp_points += streak_bonus
-
-        # Обновляем опыт пользователя и проверяем повышение уровня
         user, level_up, daily_limit_reached = database.add_user_experience(
             db, current_user.id, exp_points
         )
 
-        # Получаем дневной лимит опыта и текущий прогресс
         daily_exp_limit = database.get_game_setting_int(
             db, "daily_experience_limit", 200
         )
@@ -278,7 +267,6 @@ def end_game_session(
             user.daily_experience if hasattr(user, "daily_experience") else 0
         )
 
-        # Формируем ответ
         result = {
             "experience_gained": 0 if daily_limit_reached else exp_points,
             "total_experience": user.experience,
@@ -288,7 +276,6 @@ def end_game_session(
             "daily_exp_limit": daily_exp_limit,
             "daily_exp_current": daily_exp_current,
         }
-
         return result
     except HTTPException as he:
         raise he
