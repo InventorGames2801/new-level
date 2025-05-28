@@ -24,7 +24,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[Optional[str]] = mapped_column(String(100))
-    email: Mapped[str] = mapped_column(String(100), unique=True)
+    email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(128), nullable=False)
     role: Mapped[str] = mapped_column(String(50), default="user")
 
@@ -33,9 +33,7 @@ class User(Base):
     experience: Mapped[int] = mapped_column(Integer, default=0)
     total_points: Mapped[int] = mapped_column(Integer, default=0)
     daily_experience: Mapped[int] = mapped_column(Integer, default=0)
-    daily_experience_updated_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, nullable=True
-    )
+    daily_experience_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # Метаданные
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -67,9 +65,7 @@ class Word(Base):
     description: Mapped[str] = mapped_column(
         String(255), nullable=False
     )  # Обязательное описание для всех слов
-    difficulty: Mapped[str] = mapped_column(
-        String(20), default="easy"
-    )  # "easy", "medium", "hard"
+    difficulty: Mapped[str] = mapped_column(String(20), default="easy")  # "easy", "medium", "hard"
 
     # Статистика использования
     times_shown: Mapped[int] = mapped_column(Integer, default=0)
@@ -94,13 +90,9 @@ class UserWordHistory(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
     word_id: Mapped[int] = mapped_column(Integer, ForeignKey("words.id"), index=True)
-    used_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, index=True
-    )
+    used_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     correct: Mapped[bool] = mapped_column(Boolean, default=False)
-    game_type: Mapped[str] = mapped_column(
-        String(50)
-    )  # Тип игры, в которой использовалось слово
+    game_type: Mapped[str] = mapped_column(String(50))  # Тип игры, в которой использовалось слово
 
     # Отношения
     user: Mapped["User"] = relationship("User", back_populates="word_history")

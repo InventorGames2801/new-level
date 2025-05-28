@@ -69,7 +69,7 @@ class WordCreate(WordBase):
     translation: Optional[str] = None
     description: Optional[str] = None
 
-    @field_validator("scrambled", always=True)
+    @field_validator("scrambled", mode="before")
     def ensure_scrambled_for_scramble_game(cls, v, values):
         """Проверяет, что для игры 'scramble' есть поле scrambled."""
         if values.get("game_type") == "scramble" and not v:
