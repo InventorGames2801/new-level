@@ -257,6 +257,28 @@ def delete_word(
         )
 
 
+@router.get("/admin/words/{word_id}/edit", response_class=HTMLResponse)
+def edit_word_form(
+    request: Request,
+    word_id: int,
+    current_admin: User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    # Получаем слово из базы данных
+    word = db.query(Word).filter(Word.id == word_id).first()
+    if not word:
+        raise HTTPException(status_code=404, detail="Слово не найдено")
+
+    return templates.TemplateResponse(
+        "admin/edit_word.html",
+        {
+            "request": request,
+            "word": word,
+            "current_admin": current_admin,
+        },
+    )
+
+
 @router.post("/admin/words/{word_id}/edit")
 def update_word(
     word_id: int,
@@ -312,6 +334,38 @@ def update_word(
         logger.error(admin_log_format, f"Ошибка при обновлении слова: {e}")
         return render_error_page(
             request=request, error_message="Ошибка при обновлении слова", exception=e
+        )
+
+
+@router.get("/admin/settings", response_class=HTMLResponse)
+def admin_settings(
+    request: Request,
+    current_admin: User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        logger.info(
+            admin_log_format,
+            f"Администратор {current_admin.email} просматривает настройки приложения",
+        )
+
+        # Получаем все настройки (например, из таблицы GameSetting)
+        settings = db.query(GameSetting).all()
+
+        return templates.TemplateResponse(
+            "admin/settings.html",
+            {
+                "request": request,
+                "admin_user": current_admin,
+                "settings": settings,
+                "active_tab": "settings",
+            },
+        )
+    except Exception as e:
+        return render_error_page(
+            request=request,
+            error_message="Ошибка при загрузке настроек приложения",
+            exception=e,
         )
 
 

@@ -149,6 +149,7 @@ def get_game_words(
                 # Для сопоставления даем английское слово и описание
                 word_data["text"] = word.text
                 word_data["description"] = word.description
+                word_data["translation"] = word.translation
 
             elif game_type == "typing":
                 # Для написания даем только описание

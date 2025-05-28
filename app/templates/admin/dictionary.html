@@ -361,115 +361,47 @@
       <div class="value">{{ words|length }}</div>
     </div>
     <div class="stat-card">
-      <h4>Анаграммы</h4>
-      <div class="value">{{ words|selectattr('game_type', 'equalto', 'scramble')|list|length }}</div>
+      <h4>Использовано</h4>
+      <div class="value">{{ words|sum(attribute='times_shown') }} раз</div>
     </div>
     <div class="stat-card">
-      <h4>Сопоставления</h4>
-      <div class="value">{{ words|selectattr('game_type', 'equalto', 'matching')|list|length }}</div>
-    </div>
-    <div class="stat-card">
-      <h4>Написание слов</h4>
-      <div class="value">{{ words|selectattr('game_type', 'equalto', 'typing')|list|length }}</div>
+      <h4>Верных ответов</h4>
+      <div class="value">{{ words|sum(attribute='times_correct') }} раз</div>
     </div>
   </div>
   
-  <!-- Форма добавления слова с вкладками -->
+  <!-- Форма добавления слова -->
   <div class="admin-form">
     <h3>Добавить новое слово</h3>
-    
-    <div class="form-tabs">
-      <div class="form-tab active" data-form-type="scramble">Анаграммы</div>
-      <div class="form-tab" data-form-type="matching">Сопоставления</div>
-      <div class="form-tab" data-form-type="typing">Написание слов</div>
-    </div>
-    
-    <!-- Форма добавления слова -->
-<div class="admin-form">
-  <h3>Добавить новое слово</h3>
-  
-  <form id="word-form" method="post" action="/admin/words/create">
-    <div class="form-row">
-      <div class="form-group">
-        <label for="text">Английское слово:</label>
-        <input type="text" id="text" name="text" class="form-control" required placeholder="Введите английское слово">
+    <form id="word-form" method="post" action="/admin/words/create">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="text">Английское слово:</label>
+          <input type="text" id="text" name="text" class="form-control" required placeholder="Введите английское слово">
+        </div>
+        <div class="form-group">
+          <label for="translation">Перевод:</label>
+          <input type="text" id="translation" name="translation" class="form-control" required placeholder="Введите перевод на русский">
+        </div>
+        <div class="form-group">
+          <label for="difficulty">Сложность:</label>
+          <select id="difficulty" name="difficulty" class="form-control">
+            <option value="easy">Легкая</option>
+            <option value="medium">Средняя</option>
+            <option value="hard">Сложная</option>
+          </select>
+        </div>
       </div>
       <div class="form-group">
-        <label for="translation">Перевод:</label>
-        <input type="text" id="translation" name="translation" class="form-control" required placeholder="Введите перевод на русский">
+        <label for="description">Описание/подсказка:</label>
+        <textarea id="description" name="description" class="form-control" required rows="3" placeholder="Введите описание или подсказку для этого слова"></textarea>
       </div>
-      <div class="form-group">
-        <label for="difficulty">Сложность:</label>
-        <select id="difficulty" name="difficulty" class="form-control">
-          <option value="easy">Легкая</option>
-          <option value="medium">Средняя</option>
-          <option value="hard">Сложная</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label for="description">Описание/подсказка:</label>
-      <textarea id="description" name="description" class="form-control" required rows="3" placeholder="Введите описание или подсказку для этого слова"></textarea>
-    </div>
-    <button type="submit" class="btn-primary">Добавить слово</button>
-  </form>
-</div>
-
-<!-- Таблица со словами -->
-<div class="table-container">
-  <table class="admin-table" id="words-table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Слово</th>
-        <th>Перевод</th>
-        <th>Сложность</th>
-        <th>Описание</th>
-        <th>Статистика</th>
-        <th>Действия</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for word in words %}
-      <tr data-difficulty="{{ word.difficulty }}" data-word="{{ word.text }}">
-        <td>{{ word.id }}</td>
-        <td>{{ word.text }}</td>
-        <td>{{ word.translation }}</td>
-        <td>
-          {% if word.difficulty == 'easy' %}
-          <span class="badge badge-easy">Легкая</span>
-          {% elif word.difficulty == 'medium' %}
-          <span class="badge badge-medium">Средняя</span>
-          {% elif word.difficulty == 'hard' %}
-          <span class="badge badge-hard">Сложная</span>
-          {% endif %}
-        </td>
-        <td>{{ word.description|truncate(30) }}</td>
-        <td>Показано: {{ word.times_shown }} раз<br>Правильно: {{ word.times_correct }} ({{ "%.1f"|format(word.correct_ratio*100) }}%)</td>
-        <td class="action-buttons">
-          <a href="/admin/words/{{ word.id }}/edit" class="btn-primary btn-sm btn-info">Изменить</a>
-          <form method="post" action="/admin/words/{{ word.id }}/delete" style="display: inline;">
-            <button type="submit" class="btn-primary btn-sm btn-danger" onclick="return confirm('Вы уверены, что хотите удалить это слово?')">Удалить</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+      <button type="submit" class="btn-primary">Добавить слово</button>
+    </form>
   </div>
-  
+
   <!-- Фильтры и поиск для словаря -->
   <div class="filter-bar">
-    <div>
-      <label for="filter-game-type">Тип игры:</label>
-      <select id="filter-game-type" class="filter-select">
-        <option value="">Все типы</option>
-        <option value="scramble">Анаграммы</option>
-        <option value="matching">Сопоставления</option>
-        <option value="typing">Написание слов</option>
-      </select>
-    </div>
     <div>
       <label for="filter-difficulty">Сложность:</label>
       <select id="filter-difficulty" class="filter-select">
@@ -493,27 +425,19 @@
         <tr>
           <th>ID</th>
           <th>Слово</th>
-          <th>Тип игры</th>
+          <th>Перевод</th>
           <th>Сложность</th>
-          <th>Доп. информация</th>
-          <th>Использовано</th>
+          <th>Описание</th>
+          <th>Статистика</th>
           <th>Действия</th>
         </tr>
       </thead>
       <tbody>
         {% for word in words %}
-        <tr data-game-type="{{ word.game_type }}" data-difficulty="{{ word.difficulty }}" data-word="{{ word.text }}">
+        <tr data-difficulty="{{ word.difficulty }}" data-word="{{ word.text }}">
           <td>{{ word.id }}</td>
           <td>{{ word.text }}</td>
-          <td>
-            {% if word.game_type == 'scramble' %}
-            Анаграммы
-            {% elif word.game_type == 'matching' %}
-            Сопоставления
-            {% elif word.game_type == 'typing' %}
-            Написание слов
-            {% endif %}
-          </td>
+          <td>{{ word.translation }}</td>
           <td>
             {% if word.difficulty == 'easy' %}
             <span class="badge badge-easy">Легкая</span>
@@ -523,16 +447,11 @@
             <span class="badge badge-hard">Сложная</span>
             {% endif %}
           </td>
+          <td>{{ word.description|truncate(30) }}</td>
           <td>
-            {% if word.game_type == 'scramble' %}
-            Анаграмма: {{ word.scrambled or 'Авто' }}
-            {% elif word.game_type == 'matching' %}
-            Перевод: {{ word.translation }}
-            {% elif word.game_type == 'typing' %}
-            {{ word.description|truncate(30) }}
-            {% endif %}
+            Показано: {{ word.times_shown }}<br>
+            Правильно: {{ word.times_correct }} ({{ "%.1f"|format(word.correct_ratio*100) }}%)
           </td>
-          <td>{{ word.times_shown }} раз ({{ word.times_correct }} правильно)</td>
           <td class="action-buttons">
             <a href="/admin/words/{{ word.id }}/edit" class="btn-primary btn-sm btn-info">Изменить</a>
             <form method="post" action="/admin/words/{{ word.id }}/delete" style="display: inline;">
@@ -545,7 +464,7 @@
     </table>
   </div>
   
-  <!-- Пагинация подключается при большом количестве слов -->
+  <!-- Пагинация -->
   {% if words|length > 50 %}
   <div class="pagination">
     <a href="#" class="active">1</a>
@@ -559,56 +478,32 @@
 
 {% block scripts %}
 <script>
-  // Переключение между типами форм добавления слов
+  // Фильтрация таблицы слов (только по сложности и тексту)
   document.addEventListener('DOMContentLoaded', function() {
-    const formTabs = document.querySelectorAll('.form-tab');
-    const wordForms = document.querySelectorAll('.word-form');
-    
-    formTabs.forEach(tab => {
-      tab.addEventListener('click', function() {
-        // Обновляем активную вкладку
-        formTabs.forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-        
-        // Показываем соответствующую форму
-        const formType = this.dataset.formType;
-        wordForms.forEach(form => {
-          form.style.display = form.id === `form-${formType}` ? 'block' : 'none';
-        });
-      });
-    });
-    
-    // Фильтрация таблицы слов
-    const filterGameType = document.getElementById('filter-game-type');
     const filterDifficulty = document.getElementById('filter-difficulty');
     const searchWord = document.getElementById('search-word');
     const resetButton = document.getElementById('reset-filters');
     const rows = document.querySelectorAll('#words-table tbody tr');
     
     function applyFilters() {
-      const gameType = filterGameType.value;
       const difficulty = filterDifficulty.value;
       const searchText = searchWord.value.toLowerCase();
       
       rows.forEach(row => {
-        const rowGameType = row.dataset.gameType;
         const rowDifficulty = row.dataset.difficulty;
         const rowWord = row.dataset.word.toLowerCase();
         
-        const matchGameType = !gameType || rowGameType === gameType;
         const matchDifficulty = !difficulty || rowDifficulty === difficulty;
         const matchSearch = !searchText || rowWord.includes(searchText);
         
-        row.style.display = matchGameType && matchDifficulty && matchSearch ? '' : 'none';
+        row.style.display = matchDifficulty && matchSearch ? '' : 'none';
       });
     }
     
-    filterGameType.addEventListener('change', applyFilters);
     filterDifficulty.addEventListener('change', applyFilters);
     searchWord.addEventListener('input', applyFilters);
     
     resetButton.addEventListener('click', function() {
-      filterGameType.value = '';
       filterDifficulty.value = '';
       searchWord.value = '';
       applyFilters();

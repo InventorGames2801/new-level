@@ -544,13 +544,13 @@
         <nav class="nav">
           {% if authenticated or user %}
           <a href="/#progress" class="nav-link">Прогресс</a>
-          {% endif %}
           <a href="/about" class="nav-link">О проекте</a>
           <a href="/game" class="nav-link">Тренировка</a>
+          {% endif %}
         </nav>
-        {% if authenticated %}
+        {% if authenticated or user %}
         <a href="/profile" class="profile-link">Профиль</a>
-        {% else %}
+        {% elif not admin_user %}
         <a href="/login" class="btn">Войти</a>
         {% endif %}
       </div>
